@@ -1,0 +1,25 @@
+<!-- inventory/partials/_log_table.html -->
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Aksi</th>
+                <th>Detail</th>
+                <th>User</th>
+                <th>Tanggal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.get_action_display }}</td>
+                <td>{{ log.detail }}</td>
+                <td>{{ log.user.username }}</td>
+                <td>{{ log.timestamp|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center">Belum ada log aktivitas.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
