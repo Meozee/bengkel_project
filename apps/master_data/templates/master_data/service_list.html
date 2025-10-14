@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Daftar Jasa / Service{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-card-checklist"></i> Daftar Jasa / Service</h1>
+    <a href="{% url 'master_data:service_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Tambah Jasa</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nama Jasa</th>
+                        <th>Harga</th>
+                        <th class="text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in object_list %}
+                    <tr>
+                        <td><strong>{{ service.name }}</strong></td>
+                        <td>Rp {{ service.price|floatformat:0 }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'master_data:service_update' service.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'master_data:service_delete' service.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">Belum ada data jasa.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'master_data:master_data_index' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Kembali ke Data Master
+    </a>
+</div>
+{% endblock %}

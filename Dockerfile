@@ -1,23 +1,25 @@
-# Dockerfile
-
+# Use an official Python runtime as a parent image
 FROM python:3.10-slim
 
+# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
+# Set work directory
 WORKDIR /app
 
-# TAMBAHKAN INI: Install netcat untuk memeriksa koneksi
+# Install system dependencies (netcat for entrypoint script)
 RUN apt-get update && apt-get install -y netcat-openbsd
 
-COPY requirements.txt /app/
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Install python dependencies
+COPY ./requirements.txt /app/
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-# TAMBAHKAN INI: Salin skrip entrypoint
+# Copy entrypoint script
 COPY ./entrypoint.sh /app/entrypoint.sh
 
+# Copy project
 COPY . /app/
 
-# TAMBAHKAN INI: Set entrypoint
+# Run entrypoint.sh
 ENTRYPOINT ["/app/entrypoint.sh"]

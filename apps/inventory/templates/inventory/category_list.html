@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar Kategori{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-tags"></i> Daftar Kategori</h1>
+    <a href="{% url 'inventory:category_add' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Tambah Kategori Baru
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 30%;">Nama Kategori</th>
+                        <th>Deskripsi</th>
+                        <th class="text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td><strong>{{ category.name }}</strong></td>
+                        <td>{{ category.description|default:"-" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'inventory:category_edit' category.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            <a href="{% url 'inventory:category_delete' category.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus">
+                                <i class="bi bi-trash"></i> Hapus
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center py-4">
+                            <p class="text-muted">Belum ada kategori yang ditambahkan.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'inventory:inventory_list' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Kembali ke Daftar Inventaris
+    </a>
+</div>
+{% endblock %}

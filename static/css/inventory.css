@@ -1,0 +1,16 @@
+.table thead th {
+  background-color: #f8f9fa;
+}
+
+.badge.bg-danger {
+  font-size: 0.9rem;
+}
+
+.badge.bg-success {
+  font-size: 0.9rem;
+}
+
+form.card {
+  max-width: 600px;
+  margin: auto;
+}

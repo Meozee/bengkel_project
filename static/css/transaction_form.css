@@ -1,0 +1,74 @@
+/* Sembunyikan checkbox DELETE asli dari Django dan labelnya */
+input[type="checkbox"][name$="-DELETE"],
+label[for$="-DELETE"] {
+  display: none;
+}
+
+/* Header seksi */
+.section-header {
+  color: #34495e;
+  font-size: 1.1rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 2px solid #e9ecef !important;
+}
+
+/* Autocomplete container */
+.autocomplete-container {
+  position: relative;
+}
+
+/* Autocomplete dropdown list styling */
+.autocomplete-list {
+  position: absolute;
+  z-index: 1050; /* Pastikan di atas elemen lain */
+  background: white;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 200px;
+  overflow-y: auto;
+  width: 100%;
+  margin-top: 2px;
+  display: none; /* Sembunyikan secara default */
+}
+
+.autocomplete-list .list-group-item {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-size: 0.9rem;
+  border: none;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.autocomplete-list .list-group-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-list .list-group-item:hover,
+.autocomplete-list .list-group-item.active {
+  background-color: #e9ecef;
+}
+
+/* Tombol hapus baris */
+.remove-form-row {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  line-height: 1;
+  font-size: 1.25rem;
+}
+
+/* Field total */
+#grand-total {
+  font-size: 1.25rem;
+  background-color: #e7f5ff !important;
+  border-color: #339af0;
+  color: #1971c2;
+}
+
+.subtotal-field {
+  font-weight: 500;
+  color: #34495e;
+}

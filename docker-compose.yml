@@ -1,11 +1,9 @@
-# docker-compose.yml
-
 services:
   web:
     build: .
     user: "${UID}:${GID}"
-    # UBAH 'command' menjadi seperti ini
-    command: python manage.py runserver 0.0.0.0:8000
+    # Command for development. For production, we'll use gunicorn.
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
     volumes:
       - .:/app
     ports:
@@ -24,7 +22,15 @@ services:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     ports:
+      # Expose on 5433 to avoid conflict with local postgres
       - "5433:5432"
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - web
 
 volumes:
   postgres_data:

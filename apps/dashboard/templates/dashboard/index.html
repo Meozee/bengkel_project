@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mt-4">Dashboard</h1>
+<p>Selamat datang di sistem manajemen bengkel.</p>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Total Pendapatan</h5>
+                <p class="card-text fs-3">Rp {{ total_revenue|floatformat:0 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Jumlah Transaksi</h5>
+                <p class="card-text fs-3">{{ total_transactions }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

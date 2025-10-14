@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Hapus Purchase Order{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <div class="card mx-auto" style="max-width: 500px;">
+        <div class="card-body p-5">
+            <h1 class="card-title"><i class="bi bi-exclamation-triangle-fill text-danger"></i> Konfirmasi Hapus</h1>
+            <p class="lead mt-3">
+                Apakah Anda yakin ingin menghapus <strong>Purchase Order #{{ object.id }}</strong>?
+            </p>
+            <p class="text-muted">
+                Tindakan ini tidak dapat diurungkan. Jika PO ini berstatus "Completed", stok yang ditambahkan akan dikurangi kembali.
+            </p>
+            
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Ya, Hapus PO Ini</button>
+                <a href="{% url 'purchases:purchase_list' %}" class="btn btn-secondary">Batal</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

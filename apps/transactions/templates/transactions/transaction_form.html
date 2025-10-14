@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if transaction %}Edit Transaksi{% else %}Buat Transaksi Baru{% endif %}{% endblock %}
+
+{% block extra_head %}
+  {# Ganti path static agar sesuai dengan struktur folder yang benar #}
+  <link rel="stylesheet" href="{% static 'css/transaction_form.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <form method="post" class="card shadow-sm">
+    {% csrf_token %}
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">{% if transaction %}✏️ Edit Transaksi{% else %}➕ Buat Transaksi Baru{% endif %}</h4>
+    </div>
+
+    <div class="card-body p-4">
+      {% if form.errors or item_formset.errors or service_formset.errors %}
+        <div class="alert alert-danger">Harap perbaiki kesalahan yang ditandai di bawah.</div>
+      {% endif %}
+
+      <h5 class="border-bottom pb-2 mb-3">📄 Detail Utama</h5>
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">{{ form.invoice_number.label_tag }}{{ form.invoice_number }}{{ form.invoice_number.errors }}</div>
+        <div class="col-md-4">{{ form.customer.label_tag }}{{ form.customer }}{{ form.customer.errors }}</div>
+        <div class="col-md-4">{{ form.vehicle.label_tag }}{{ form.vehicle }}{{ form.vehicle.errors }}</div>
+        <div class="col-md-4">{{ form.mechanic.label_tag }}{{ form.mechanic }}{{ form.mechanic.errors }}</div>
+        <div class="col-md-4">{{ form.status.label_tag }}{{ form.status }}{{ form.status.errors }}</div>
+        <div class="col-md-4">{{ form.transaction_date.label_tag }}{{ form.transaction_date }}{{ form.transaction_date.errors }}</div>
+        <div class="col-12">{{ form.notes.label_tag }}{{ form.notes }}{{ form.notes.errors }}</div>
+      </div>
+
+      <h5 class="border-bottom pb-2 mb-3">🧰 Detail Item Barang</h5>
+      {{ item_formset.management_form }}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 35%;">Item</th>
+              <th style="width: 15%;">Kuantitas</th>
+              <th style="width: 20%;">Harga Satuan</th>
+              <th style="width: 15%;">Diskon (%)</th>
+              <th style="width: 15%;" class="text-end">Subtotal</th>
+              <th style="width: 5%;" class="text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="item-formset-body">
+            {% for form in item_formset %}
+              <tr class="item-form-row">
+                <td class="autocomplete-container">
+                  {{ form.id }}
+                  {{ form.item }} {# Ini adalah input hidden untuk ID item #}
+                  <input type="text" class="form-control item-autocomplete" placeholder="Ketik untuk mencari..." value="{% if form.instance.item %}{{ form.instance.item.name }}{% endif %}">
+                  {{ form.item.errors }}
+                </td>
+                <td>{{ form.quantity }}{{ form.quantity.errors }}</td>
+                <td>{{ form.unit_price }}{{ form.unit_price.errors }}</td>
+                <td>{{ form.discount_percentage }}{{ form.discount_percentage.errors }}</td>
+                <td><input type="text" readonly class="form-control-plaintext text-end subtotal-field" value="Rp 0"></td>
+                <td class="text-center">
+                  {{ form.DELETE }} {# Checkbox ini akan disembunyikan oleh CSS #}
+                  <button type="button" class="btn btn-sm btn-outline-danger remove-form-row">×</button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-primary mb-4" id="add-item-btn">+ Tambah Item</button>
+
+      <h5 class="border-bottom pb-2 mb-3">🔧 Detail Jasa/Service</h5>
+      {{ service_formset.management_form }}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 35%;">Service</th>
+              <th style="width: 15%;">Kuantitas</th>
+              <th style="width: 20%;">Harga</th>
+              <th style="width: 15%;">Diskon (%)</th>
+              <th style="width: 15%;" class="text-end">Subtotal</th>
+              <th style="width: 5%;" class="text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="service-formset-body">
+            {% for form in service_formset %}
+              <tr class="service-form-row">
+                <td>{{ form.id }}{{ form.service }}{{ form.service.errors }}</td>
+                <td>{{ form.quantity }}{{ form.quantity.errors }}</td>
+                <td>{{ form.unit_price }}{{ form.unit_price.errors }}</td>
+                <td>{{ form.discount_percentage }}{{ form.discount_percentage.errors }}</td>
+                <td><input type="text" readonly class="form-control-plaintext text-end subtotal-field" value="Rp 0"></td>
+                <td class="text-center">
+                  {{ form.DELETE }} {# Checkbox ini akan disembunyikan oleh CSS #}
+                  <button type="button" class="btn btn-sm btn-outline-danger remove-form-row">×</button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-primary mb-4" id="add-service-btn">+ Tambah Service</button>
+
+      <h5 class="border-bottom pb-2 mb-3">💰 Finansial</h5>
+      <div class="row g-3 mb-3 justify-content-end">
+        <div class="col-md-4">{{ form.other_charges.label_tag }}{{ form.other_charges }}</div>
+        <div class="col-md-4">{{ form.discount_amount.label_tag }}{{ form.discount_amount }}</div>
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Total Akhir</label>
+          <input type="text" readonly class="form-control fw-bold fs-5 text-end" id="grand-total" value="Rp 0">
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer text-end">
+      <a href="{% url 'transactions:transaction_list' %}" class="btn btn-outline-secondary px-4">Batal</a>
+      <button type="submit" class="btn btn-success px-4">Simpan Transaksi</button>
+    </div>
+  </form>
+
+  <table style="display: none;">
+    <tbody id="item-form-template">
+      <tr class="item-form-row">
+        <td class="autocomplete-container">
+          {{ item_formset.empty_form.id }}
+          {{ item_formset.empty_form.item }}
+          <input type="text" class="form-control item-autocomplete" placeholder="Ketik untuk mencari...">
+        </td>
+        <td>{{ item_formset.empty_form.quantity }}</td>
+        <td>{{ item_formset.empty_form.unit_price }}</td>
+        <td>{{ item_formset.empty_form.discount_percentage }}</td>
+        <td><input type="text" readonly class="form-control-plaintext text-end subtotal-field" value="Rp 0"></td>
+        <td class="text-center">
+          <button type="button" class="btn btn-sm btn-outline-danger remove-form-row">×</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table style="display: none;">
+    <tbody id="service-form-template">
+      <tr class="service-form-row">
+        <td>{{ service_formset.empty_form.id }}{{ service_formset.empty_form.service }}</td>
+        <td>{{ service_formset.empty_form.quantity }}</td>
+        <td>{{ service_formset.empty_form.unit_price }}</td>
+        <td>{{ service_formset.empty_form.discount_percentage }}</td>
+        <td><input type="text" readonly class="form-control-plaintext text-end subtotal-field" value="Rp 0"></td>
+        <td class="text-center">
+          <button type="button" class="btn btn-sm btn-outline-danger remove-form-row">×</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+  {# Pastikan path static ini benar sesuai struktur folder kamu #}
+  <script src="{% static 'js/transaction_form.js' %}"></script>
+{% endblock %}

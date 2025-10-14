@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>Detail Barang</h3>
+  <ul class="list-group">
+    <li class="list-group-item"><strong>Nama:</strong> {{ item.name }}</li>
+    <li class="list-group-item"><strong>Kategori:</strong> {{ item.category.name }}</li>
+    <li class="list-group-item"><strong>Harga Jual:</strong> Rp{{ item.sell_price|floatformat:0 }}</li>
+    <li class="list-group-item"><strong>Jumlah:</strong> {{ item.quantity }}</li>
+    <li class="list-group-item"><strong>Satuan:</strong> {{ item.unit }}</li>
+  </ul>
+  <a href="{% url 'inventory:inventory_list' %}" class="btn btn-secondary mt-3">Kembali</a>
+</div>
+{% endblock %}

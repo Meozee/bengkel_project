@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar Purchase Order{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-cart4"></i> Purchase Orders (PO)</h1>
+    <a href="{% url 'purchases:purchase_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Buat PO Baru
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" action="{% url 'purchases:purchase_list' %}">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="q" class="form-label">Cari ID PO / Vendor</label>
+                    <input type="text" name="q" id="q" class="form-control" value="{{ current_query }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="vendor" class="form-label">Vendor</label>
+                    <select name="vendor" id="vendor" class="form-select">
+                        <option value="">Semua Vendor</option>
+                        {% for v in vendors %}
+                        <option value="{{ v.pk }}" {% if current_vendor == v.pk %}selected{% endif %}>
+                            {{ v.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">Semua Status</option>
+                        {% for value, text in statuses %}
+                        <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                            {{ text }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-info w-100">Filter</button>
+                    <a href="{% url 'purchases:purchase_list' %}" class="btn btn-secondary w-100 mt-1">Reset</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>PO ID</th>
+                <th>Vendor</th>
+                <th>Tanggal Order</th>
+                <th>Status</th>
+                <th class="text-end">Total</th>
+                <th class="text-end">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for po in purchases %}
+            <tr>
+                <td><strong>PO-{{ po.id }}</strong></td>
+                <td>{{ po.vendor.name }}</td>
+                <td>{{ po.order_date|date:"d M Y, H:i" }}</td>
+                <td>
+                    {% if po.status == 'COMPLETED' %}
+                        <span class="badge bg-success">{{ po.get_status_display }}</span>
+                    {% elif po.status == 'PENDING' %}
+                        <span class="badge bg-warning text-dark">{{ po.get_status_display }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ po.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td class="text-end fw-bold">Rp {{ po.total_amount|floatformat:2 }}</td>
+                <td class="text-end">
+                    <a href="{% url 'purchases:purchase_update' po.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                    <a href="{% url 'purchases:purchase_delete' po.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center py-4">
+                    <p class="text-muted">Tidak ada Purchase Order ditemukan.</p>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if is_paginated %}
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+        {% endif %}
+        
+        {% for i in paginator.page_range %}
+            <li class="page-item {% if page_obj.number == i %}active{% endif %}">
+                <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+            </li>
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Daftar Pelanggan{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-people-fill"></i> Daftar Pelanggan</h1>
+    <a href="{% url 'master_data:customer_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Tambah Pelanggan</a>
+</div>
+<!-- Sisa template list seperti search, table, pagination -->
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nama</th>
+                        <th>No. Telepon</th>
+                        <th>Email</th>
+                        <th class="text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in object_list %}
+                    <tr>
+                        <td><strong>{{ customer.name }}</strong></td>
+                        <td>{{ customer.phone_number }}</td>
+                        <td>{{ customer.email|default:"-" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'master_data:customer_update' customer.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'master_data:customer_delete' customer.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">Belum ada data pelanggan.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="mt-4">
+    <a href="{% url 'master_data:master_data_index' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Kembali ke Data Master
+    </a>
+</div>
+{% endblock %}

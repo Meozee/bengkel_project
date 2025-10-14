@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Daftar Vendor{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-building"></i> Daftar Vendor</h1>
+    <a href="{% url 'master_data:vendor_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Tambah Vendor</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nama Vendor</th>
+                        <th>Kontak Person</th>
+                        <th>No. Telepon</th>
+                        <th class="text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vendor in object_list %}
+                    <tr>
+                        <td><strong>{{ vendor.name }}</strong></td>
+                        <td>{{ vendor.contact_person|default:"-" }}</td>
+                        <td>{{ vendor.phone_number|default:"-" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'master_data:vendor_update' vendor.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'master_data:vendor_delete' vendor.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">Belum ada data vendor.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'master_data:master_data_index' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Kembali ke Data Master
+    </a>
+</div>
+{% endblock %}

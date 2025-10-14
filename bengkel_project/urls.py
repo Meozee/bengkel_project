@@ -1,18 +1,37 @@
-# bengkel_project/urls.py - VERSI BENAR
+"""
+URL configuration for bengkel_project project.
+
+The `urlpatterns` list routes URLs to views. For more information please see:
+    https://docs.djangoproject.com/en/5.2/topics/http/urls/
+Examples:
+Function views
+    1. Add an import:  from my_app import views
+    2. Add a URL to urlpatterns:  path('', views.home, name='home')
+Class-based views
+    1. Add an import:  from other_app.views import Home
+    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
+Including another URLconf
+    1. Import the include() function: from django.urls import include, path
+    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+"""
+
+# bengkel_project/urls.py
+# bengkel_project/urls.py
+
 from django.contrib import admin
 from django.urls import path, include
-# V Impor view login dan logout dari aplikasi users V
-from users.views import login_view, logout_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    # Jadikan halaman dashboard sebagai halaman utama
+    path('', include('apps.dashboard.urls', namespace='dashboard')),
+    
+    # Arahkan semua URL yang berawalan 'transactions/' ke apps/transactions/urls.py
+    path('transactions/', include('apps.transactions.urls', namespace='transactions')),
+    path('inventory/', include('apps.inventory.urls', namespace='inventory')),
+    path('purchases/', include('apps.purchases.urls', namespace='purchases')),
+    path('master-data/', include('apps.master_data.urls')),
 
-    # URL Autentikasi
-    path('login/', login_view, name='login'),
-    path('logout/', logout_view, name='logout'),
 
-    path('users/', include('users.urls', namespace='users')),
-    path('transactions/', include('transactions.urls')),
-    path('inventory/', include('inventory.urls', namespace='inventory')), # <-- TAMBAHKAN INI
-    path('', include('analytics.urls')),
 ]

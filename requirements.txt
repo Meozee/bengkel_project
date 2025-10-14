@@ -1,5 +1,31 @@
 # requirements.txt
+
+# --- Core ---
 django
 psycopg2-binary
-gunicorn
-python-dotenv
+python-dotenv         # <-- Untuk membaca file .env di settings.py
+gunicorn              # <-- WSGI Server untuk production, Nginx akan berkomunikasi dengan ini
+
+# --- Forms & Frontend ---
+django-crispy-forms
+crispy-bootstrap5     # (Jika menggunakan Bootstrap 5)
+
+# --- Utilities & Debugging ---
+django-extensions
+django-debug-toolbar  # <-- Sangat penting untuk development
+Pillow
+
+# --- Data & Reporting ---
+pandas
+openpyxl              # <-- Untuk export/import Excel
+reportlab             # (atau weasyprint, sesuai pilihanmu)
+django-filter
+
+# --- Code Quality (Opsional tapi sangat direkomendasikan) ---
+black                 # <-- Formatter kode otomatis
+flake8                # <-- Pengecek style guide
+isort                 # <-- Mengurutkan import secara otomatis
+
+# --- Visualisasi ---
+# Untuk visualisasi, biasanya library-nya ada di frontend (JS).
+# Jadi, pandas di backend cukup untuk menyiapkan data.

@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-freeze.txt
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Environment variables
+.env
+
+# Media & Static files
+/media/
+/staticfiles/ # Direktori hasil collectstatic
+
+# IDE files
+.idea/
+.vscode/
+
+# Docker
+docker-compose.override.yml

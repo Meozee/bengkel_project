@@ -1,0 +1,40 @@
+/* =============== */
+/* INVENTORY STYLE */
+/* =============== */
+
+.table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.table td, .table th {
+  vertical-align: middle;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+.card-header {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.btn {
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.category-form label {
+  font-weight: 500;
+  color: #333;
+}
+
+.category-form input,
+.category-form select {
+  border-radius: 8px !important;
+}

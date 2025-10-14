@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Data Master{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-server"></i> Data Master</h1>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4 col-sm-6">
+        <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+                <i class="bi bi-people-fill fs-1 text-primary"></i>
+                <h5 class="card-title mt-3">Pelanggan</h5>
+                <p class="card-text text-muted">Kelola data semua pelanggan.</p>
+                <a href="{% url 'master_data:customer_list' %}" class="btn btn-primary">Kelola</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-sm-6">
+        <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+                <i class="bi bi-tools fs-1 text-success"></i>
+                <h5 class="card-title mt-3">Mekanik</h5>
+                <p class="card-text text-muted">Kelola data semua mekanik.</p>
+                <a href="{% url 'master_data:mechanic_list' %}" class="btn btn-success">Kelola</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-sm-6">
+        <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+                <i class="bi bi-truck-front-fill fs-1 text-info"></i>
+                <h5 class="card-title mt-3">Kendaraan</h5>
+                <p class="card-text text-muted">Kelola data kendaraan pelanggan.</p>
+                <a href="{% url 'master_data:vehicle_list' %}" class="btn btn-info">Kelola</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-sm-6">
+        <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+                <i class="bi bi-card-checklist fs-1 text-warning"></i>
+                <h5 class="card-title mt-3">Jasa / Service</h5>
+                <p class="card-text text-muted">Kelola jenis layanan dan harga.</p>
+                <a href="{% url 'master_data:service_list' %}" class="btn btn-warning">Kelola</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-sm-6">
+        <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+                <i class="bi bi-building fs-1 text-danger"></i>
+                <h5 class="card-title mt-3">Vendor</h5>
+                <p class="card-text text-muted">Kelola data supplier/vendor.</p>
+                <a href="{% url 'master_data:vendor_list' %}" class="btn btn-danger">Kelola</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Daftar Kendaraan{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-truck-front-fill"></i> Daftar Kendaraan</h1>
+    <a href="{% url 'master_data:vehicle_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Tambah Kendaraan</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Plat Nomor</th>
+                        <th>Pemilik</th>
+                        <th>Merek</th>
+                        <th>Model</th>
+                        <th class="text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vehicle in object_list %}
+                    <tr>
+                        <td><strong>{{ vehicle.license_plate }}</strong></td>
+                        <td>{{ vehicle.customer.name }}</td>
+                        <td>{{ vehicle.brand }}</td>
+                        <td>{{ vehicle.model }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'master_data:vehicle_update' vehicle.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'master_data:vehicle_delete' vehicle.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">Belum ada data kendaraan.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'master_data:master_data_index' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Kembali ke Data Master
+    </a>
+</div>
+{% endblock %}
