@@ -5,5 +5,9 @@ from . import views
 app_name = 'dashboard'
 
 urlpatterns = [
-    path('', views.dashboard_view, name='index'),  # ubah dari 'home' ke 'index'
+    # Ini akan cocok dengan {% url 'dashboard:dashboard' %} di sidebar-mu
+    path('', views.dashboard_view, name='dashboard'),
+    
+    # Ini untuk mencocokkan LOGIN_REDIRECT_URL = 'dashboard:index' di settings.py
+    path('index/', views.dashboard_view, name='index'), 
 ]

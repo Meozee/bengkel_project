@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Laporan Stok Rendah</title>
+    <style>
+        body { font-family: sans-serif; font-size: 12px; }
+        h1 { color: #333; }
+        p { color: #666; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        .text-center { text-align: center; }
+        .badge { display: inline-block; padding: .25em .4em; font-size: 75%; font-weight: 700; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .25rem; }
+        .bg-danger { color: #fff; background-color: #dc3545; }
+        .bg-warning { color: #000; background-color: #ffc107; }
+    </style>
+</head>
+<body>
+    <h1>Laporan Stok Rendah</h1>
+    <p>Generated pada: {{ generated_date|date:"d M Y, H:i" }}</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nama Item</th>
+                <th class="text-center">Stok Saat Ini</th>
+                <th class="text-center">Batas Order Ulang</th>
+                <th class="text-center">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.name }}<br><small>SKU: {{ item.sku|default:'-' }}</small></td>
+                <td class="text-center">{{ item.quantity }}</td>
+                <td class="text-center">{{ item.reorder_threshold }}</td>
+                <td class="text-center">
+                    {% if item.quantity == 0 %}
+                        <span class="badge bg-danger">Habis</span>
+                    {% else %}
+                        <span class="badge bg-warning">Stok Rendah</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center">Semua stok aman.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

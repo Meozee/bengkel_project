@@ -1,0 +1,418 @@
+{% extends 'base.html' %}
+{% load humanize %} {% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" action="{% url 'dashboard:dashboard' %}" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="periode" class="form-label">Periode</label>
+                    <select name="periode" id="periode" class="form-select" onchange="toggleCustomDate(this.value)">
+                        <option value="bulan_ini" {% if current_periode == 'bulan_ini' %}selected{% endif %}>Bulan Ini</option>
+                        <option value="bulan_lalu" {% if current_periode == 'bulan_lalu' %}selected{% endif %}>Bulan Lalu</option>
+                        <option value="keseluruhan" {% if current_periode == 'keseluruhan' %}selected{% endif %}>Keseluruhan</Toption>
+                        <option value="custom" {% if current_periode == 'custom' %}selected{% endif %}>Custom Range</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="start_date" class="form-label">Tanggal Mulai</label>
+                    <input type="date" name="start_date" id="start_date" class="form-control" value="{{ current_start_date }}" {% if current_periode != 'custom' %}disabled{% endif %}>
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date" class="form-label">Tanggal Akhir</label>
+                    <input type="date" name="end_date" id="end_date" class="form-control" value="{{ current_end_date }}" {% if current_periode != 'custom' %}disabled{% endif %}>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Pemasukan</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ total_pemasukan|intcomma }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-calendar-check-fill h2 text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total Pengeluaran</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ total_pengeluaran|intcomma }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-cart-x-fill h2 text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Laba Bersih</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ laba_bersih|intcomma }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-graph-up-arrow h2 text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card {% if persentase_perubahan >= 0 %}border-left-primary{% else %}border-left-warning{% endif %} shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold {% if persentase_perubahan >= 0 %}text-primary{% else %}text-warning{% endif %} text-uppercase mb-1">Perubahan (vs Bln Lalu)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {% if persentase_perubahan > 0 %}+{% endif %}{{ persentase_perubahan|floatformat:2 }}%
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-arrow-down-up h2 text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Grafik Tren (Pemasukan vs Pengeluaran)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area" style="height: 350px;">
+                        <canvas id="trenChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Distribusi Pemasukan</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie" style="height: 150px;">
+                        <canvas id="pemasukanDonut"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Distribusi Pengeluaran</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie" style="height: 150px;">
+                        <canvas id="pengeluaranDonut"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if insight_text %}
+    <div class="alert alert-info shadow-sm" role="alert">
+        <i class="bi bi-lightbulb-fill me-2"></i> <strong>Insight:</strong> {{ insight_text }}
+    </div>
+    {% endif %}
+
+    <h4 class="h4 mb-3 text-gray-800">Peringkat Top 5</h4>
+    <div class="row">
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Top Montir</h6></div>
+                <div class="card-body">
+                    <canvas id="topMontirChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Top Pelanggan</h6></div>
+                <div class="card-body">
+                    <canvas id="topPelangganChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Top Barang Terjual</h6></div>
+                <div class="card-body">
+                    <canvas id="topBarangChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Top Service</h6></div>
+                <div class="card-body">
+                    <canvas id="topServiceChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Top Vendor</h6></div>
+                <div class="card-body">
+                    <canvas id="topVendorChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Data Grafik Tren
+    const trenLabels = {{ tren_labels_json|safe }};
+    const trenPemasukanData = {{ tren_pemasukan_data_json|safe }};
+    const trenPengeluaranData = {{ tren_pengeluaran_data_json|safe }};
+
+    // Data Donut Pemasukan
+    const distPemasukanLabels = {{ dist_pemasukan_labels_json|safe }};
+    const distPemasukanData = {{ dist_pemasukan_data_json|safe }};
+
+    // Data Donut Pengeluaran
+    const distPengeluaranLabels = {{ dist_pengeluaran_labels_json|safe }};
+    const distPengeluaranData = {{ dist_pengeluaran_data_json|safe }};
+
+    // Data Top 5
+    const topChartsData = {{ top_charts_data_json|safe }};
+</script>
+
+<script>
+    // Fungsi bantuan untuk format Rupiah
+    const formatRupiah = (value) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0
+        }).format(value);
+    };
+
+    // Opsi default untuk tooltip
+    const defaultTooltipOptions = {
+        callbacks: {
+            label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                    label += ': ';
+                }
+                if (context.parsed.y !== null) {
+                    // Cek jika ini chart pelanggan atau vendor
+                    if (context.chart.canvas.id === 'topPelangganChart' || context.chart.canvas.id === 'topVendorChart') {
+                        label += formatRupiah(context.parsed.x); // Horizontal chart pakai 'x'
+                    } else {
+                         label += context.parsed.y;
+                    }
+                }
+                return label;
+            }
+        }
+    };
+    
+    // Opsi untuk tooltip Donut/Pie
+    const donutTooltipOptions = {
+         callbacks: {
+            label: function(context) {
+                let label = context.label || '';
+                let value = context.parsed;
+                let sum = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                let percentage = (value / sum * 100).toFixed(2) + '%';
+                return `${label}: ${formatRupiah(value)} (${percentage})`;
+            }
+        }
+    };
+    
+
+    // 📈 Render Grafik Tren
+    const ctxTren = document.getElementById('trenChart').getContext('2d');
+    if (trenLabels.length > 0) {
+        new Chart(ctxTren, {
+            type: 'line',
+            data: {
+                labels: trenLabels,
+                datasets: [
+                    {
+                        label: 'Pemasukan',
+                        data: trenPemasukanData,
+                        borderColor: 'rgba(28, 200, 138, 1)', // success
+                        backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Pengeluaran',
+                        data: trenPengeluaranData,
+                        borderColor: 'rgba(231, 74, 59, 1)', // danger
+                        backgroundColor: 'rgba(231, 74, 59, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        ticks: { callback: (value) => formatRupiah(value) }
+                    }
+                },
+                plugins: { 
+                    tooltip: { 
+                        callbacks: {
+                            label: (context) => `${context.dataset.label}: ${formatRupiah(context.parsed.y)}`
+                        }
+                    } 
+                }
+            }
+        });
+    } else {
+         ctxTren.canvas.parentNode.innerHTML = '<p class="text-center text-muted">Tidak ada data tren untuk periode ini.</p>';
+    }
+
+    // 🍩 Render Donut Pemasukan
+    const ctxPemasukan = document.getElementById('pemasukanDonut').getContext('2d');
+    if (distPemasukanData.reduce((a, b) => a + b, 0) > 0) {
+        new Chart(ctxPemasukan, {
+            type: 'doughnut',
+            data: {
+                labels: distPemasukanLabels,
+                datasets: [{
+                    data: distPemasukanData,
+                    backgroundColor: ['#4e73df', '#1cc88a'], // primary, success
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' }, tooltip: donutTooltipOptions }
+            }
+        });
+    } else {
+        ctxPemasukan.canvas.parentNode.innerHTML = '<p class="text-center text-muted">Tidak ada data.</p>';
+    }
+
+    // 🍩 Render Donut Pengeluaran
+    const ctxPengeluaran = document.getElementById('pengeluaranDonut').getContext('2d');
+     if (distPengeluaranData.length > 0) {
+        new Chart(ctxPengeluaran, {
+            type: 'doughnut',
+            data: {
+                labels: distPengeluaranLabels,
+                datasets: [{
+                    data: distPengeluaranData,
+                    // Kamu bisa tambahkan lebih banyak warna di sini
+                    backgroundColor: ['#e74a3b', '#f6c23e', '#36b9cc', '#858796', '#5a5c69'], 
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: donutTooltipOptions } // Sembunyikan legend jika terlalu banyak
+            }
+        });
+    } else {
+        ctxPengeluaran.canvas.parentNode.innerHTML = '<p class="text-center text-muted">Tidak ada data.</p>';
+    }
+
+    // 🏆 Render Top 5 Charts (Horizontal Bar)
+    const createHorizontalBarChart = (canvasId, labels, data, label, isCurrency = false) => {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        if (data.length > 0) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: 'rgba(78, 115, 223, 0.8)', // primary
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Ini yang membuatnya horizontal
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => ` ${label}: ${isCurrency ? formatRupiah(context.parsed.x) : context.parsed.x}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { 
+                                callback: (value) => isCurrency ? formatRupiah(value) : value,
+                                beginAtZero: true 
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+             ctx.canvas.parentNode.innerHTML = '<p class="text-center text-muted">Tidak ada data.</p>';
+        }
+    };
+
+    createHorizontalBarChart('topMontirChart', topChartsData.montir.labels, topChartsData.montir.data, 'Jml Transaksi');
+    createHorizontalBarChart('topPelangganChart', topChartsData.pelanggan.labels, topChartsData.pelanggan.data, 'Total Belanja', true);
+    createHorizontalBarChart('topBarangChart', topChartsData.barang.labels, topChartsData.barang.data, 'Jml Terjual');
+    createHorizontalBarChart('topServiceChart', topChartsData.service.labels, topChartsData.service.data, 'Jml Digunakan');
+    createHorizontalBarChart('topVendorChart', topChartsData.vendor.labels, topChartsData.vendor.data, 'Total Pembelian', true);
+
+</script>
+
+<script>
+    function toggleCustomDate(selectedValue) {
+        const startDate = document.getElementById('start_date');
+        const endDate = document.getElementById('end_date');
+        if (selectedValue === 'custom') {
+            startDate.disabled = false;
+            endDate.disabled = false;
+        } else {
+            startDate.disabled = true;
+            endDate.disabled = true;
+            startDate.value = '';
+            endDate.value = '';
+        }
+    }
+    // Panggil saat halaman load untuk memastikan state-nya benar
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleCustomDate(document.getElementById('periode').value);
+    });
+</script>
+{% endblock scripts %}

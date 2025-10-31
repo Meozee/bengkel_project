@@ -8,18 +8,29 @@ ENV PYTHONUNBUFFERED 1
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies (netcat for entrypoint script)
-RUN apt-get update && apt-get install -y netcat-openbsd
+# --- Install system dependencies ---
+# Includes WeasyPrint dependencies (Cairo, Pango, GDK, etc)
+RUN apt-get update && apt-get install -y \
+    netcat-openbsd \
+    libpango-1.0-0 \
+    libcairo2 \
+    libpangoft2-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    fonts-liberation \
+    shared-mime-info \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
+# --- Install python dependencies ---
 COPY ./requirements.txt /app/
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-# Copy entrypoint script
+# --- Copy entrypoint script ---
 COPY ./entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
-# Copy project
+# --- Copy project ---
 COPY . /app/
 
-# Run entrypoint.sh
+# --- Run entrypoint.sh ---
 ENTRYPOINT ["/app/entrypoint.sh"]

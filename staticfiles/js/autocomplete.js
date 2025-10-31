@@ -1,47 +1,59 @@
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.item-autocomplete').forEach(input => {
-    const hiddenInput = input.previousElementSibling; // form.item.as_hidden
-    const listBox = document.createElement('div');
-    listBox.classList.add('autocomplete-list');
-    listBox.style.position = 'absolute';
-    listBox.style.background = 'white';
-    listBox.style.border = '1px solid #ccc';
-    listBox.style.zIndex = '1000';
-    listBox.style.width = input.offsetWidth + 'px';
-    listBox.style.display = 'none';
-    input.parentNode.style.position = 'relative';
-    input.parentNode.appendChild(listBox);
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".item-autocomplete").forEach((input) => {
+    setupAutocomplete(input);
+  });
 
-    input.addEventListener('input', async () => {
-      const query = input.value.trim();
+  function setupAutocomplete(input) {
+    const suggestionBox = document.createElement("div");
+    suggestionBox.classList.add("autocomplete-box");
+    input.parentNode.appendChild(suggestionBox);
+
+    input.addEventListener("input", async function () {
+      const query = this.value.trim();
       if (query.length < 2) {
-        listBox.style.display = 'none';
+        suggestionBox.innerHTML = "";
         return;
       }
-      const res = await fetch(`/transactions/item-autocomplete/?q=${query}`);
-      const data = await res.json();
 
-      listBox.innerHTML = '';
-      data.forEach(item => {
-        const option = document.createElement('div');
-        option.textContent = `${item.name} — Rp ${item.price}`;
-        option.style.padding = '4px 8px';
-        option.style.cursor = 'pointer';
-        option.addEventListener('click', () => {
-          input.value = item.name;
-          hiddenInput.value = item.id; // 🧠 ID dikirim ke backend
-          const row = input.closest('tr');
-          const priceField = row.querySelector('input[name$="unit_price"]');
-          if (priceField) priceField.value = item.price;
-          listBox.style.display = 'none';
+      try {
+        const response = await fetch(`/inventory/autocomplete/?q=${encodeURIComponent(query)}`);
+        const results = await response.json();
+
+        suggestionBox.innerHTML = "";
+        results.forEach((item) => {
+          const option = document.createElement("div");
+          option.classList.add("autocomplete-item");
+          option.textContent = `${item.name} - Rp ${item.price.toLocaleString("id-ID")}`;
+          option.dataset.id = item.id;
+          option.dataset.price = item.price;
+
+          option.addEventListener("click", () => {
+            input.value = item.name;
+
+            // Isi hidden input item.id
+            const hiddenInput = input.parentNode.querySelector('input[type="hidden"]');
+            hiddenInput.value = item.id;
+
+            // Isi harga satuan otomatis
+            const row = input.closest(".item-row");
+            const priceInput = row.querySelector('[name$="unit_price"]');
+            priceInput.value = item.price;
+
+            suggestionBox.innerHTML = "";
+          });
+
+          suggestionBox.appendChild(option);
         });
-        listBox.appendChild(option);
-      });
-      listBox.style.display = data.length ? 'block' : 'none';
+      } catch (err) {
+        console.error("Error fetching autocomplete data:", err);
+      }
     });
 
-    document.addEventListener('click', e => {
-      if (!input.contains(e.target)) listBox.style.display = 'none';
+    // Tutup dropdown kalau klik di luar
+    document.addEventListener("click", (e) => {
+      if (!suggestionBox.contains(e.target) && e.target !== input) {
+        suggestionBox.innerHTML = "";
+      }
     });
-  });
+  }
 });

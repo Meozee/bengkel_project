@@ -17,6 +17,8 @@ Pillow
 
 # --- Data & Reporting ---
 pandas
+openpyxl
+WeasyPrint
 openpyxl              # <-- Untuk export/import Excel
 reportlab             # (atau weasyprint, sesuai pilihanmu)
 django-filter

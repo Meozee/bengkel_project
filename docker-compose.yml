@@ -1,13 +1,15 @@
+version: '3.8'
+
 services:
   web:
     build: .
     user: "${UID}:${GID}"
-    # Command for development. For production, we'll use gunicorn.
+    # Ganti gunicorn dengan runserver
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - "8000:8000"  # Akses via http://localhost:8000 atau http://<IP_LAPTOP>:8000
     env_file:
       - .env
     depends_on:
@@ -22,15 +24,7 @@ services:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     ports:
-      # Expose on 5433 to avoid conflict with local postgres
-      - "5433:5432"
-
-  nginx:
-    build: ./nginx
-    ports:
-      - "80:80"
-    depends_on:
-      - web
+      - "5433:5432"  # Expose on 5433 to avoid conflict with local postgres
 
 volumes:
   postgres_data:

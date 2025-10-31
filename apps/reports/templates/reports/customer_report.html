@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Laporan Pelanggan{% endblock %}
+
+{% block content %}
+<h1><i class="bi bi-person-lines-fill"></i> Laporan Pelanggan</h1>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="start_date" class="form-label">Tanggal Mulai</label>
+                    <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date" class="form-label">Tanggal Selesai</label>
+                    <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="sort_by" class="form-label">Urutkan Berdasarkan</label>
+                    <select name="sort_by" id="sort_by" class="form-select">
+                        <option value="-total_spending" {% if sort_by == '-total_spending' %}selected{% endif %}>Belanja Tertinggi</option>
+                        <option value="total_spending" {% if sort_by == 'total_spending' %}selected{% endif %}>Belanja Terendah</option>
+                        <option value="-total_visits" {% if sort_by == '-total_visits' %}selected{% endif %}>Kunjungan Terbanyak</option>
+                        <option value="total_visits" {% if sort_by == 'total_visits' %}selected{% endif %}>Kunjungan Tersedikit</option>
+                        <option value="-last_visit" {% if sort_by == '-last_visit' %}selected{% endif %}>Kunjungan Terbaru</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">Filter & Urutkan</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Menampilkan {{ report_data.count }} pelanggan</span>
+        <a href="{% url 'reports:export_customer' %}?start_date={{ start_date }}&end_date={{ end_date }}&sort_by={{ sort_by }}" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-file-earmark-excel"></i> Export ke Excel
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nama Pelanggan</th>
+                        <th>No. Telepon</th>
+                        <th class="text-center">Total Kunjungan</th>
+                        <th class="text-end">Total Belanja</th>
+                        <th class="text-center">Kunjungan Terakhir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in report_data %}
+                    <tr>
+                        <td><strong>{{ customer.name }}</strong></td>
+                        <td>{{ customer.phone_number }}</td>
+                        <td class="text-center">{{ customer.total_visits }}</td>
+                        <td class="text-end">Rp {{ customer.total_spending|floatformat:0 }}</td>
+                        <td class="text-center">{{ customer.last_visit|date:"d M Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <h5><i class="bi bi-search"></i> Tidak Ditemukan</h5>
+                            <p>Tidak ada data pelanggan yang cocok dengan kriteria filter.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'reports:report_index' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Kembali ke Pusat Laporan
+    </a>
+</div>
+{% endblock %}

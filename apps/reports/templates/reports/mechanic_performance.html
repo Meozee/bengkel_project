@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Laporan Kinerja Mekanik{% endblock %}
+
+{% block content %}
+<h1><i class="bi bi-person-gear"></i> Laporan Kinerja Mekanik</h1>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="mechanic" class="form-label">Pilih Mekanik</label>
+                    <select name="mechanic" id="mechanic" class="form-select" required>
+                        <option value="">---</option>
+                        {% for m in mechanics %}
+                        <option value="{{ m.pk }}" {% if selected_mechanic_id == m.pk %}selected{% endif %}>{{ m.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="start_date" class="form-label">Tanggal Mulai</label>
+                    <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date" class="form-label">Tanggal Selesai</label>
+                    <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Generate</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if report_data %}
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5>Hasil Kinerja: {{ report_data.mechanic.name }}</h5>
+        <small class="text-muted">Periode: {{ report_data.start_date|date:"d M Y" }} - {{ report_data.end_date|date:"d M Y" }}</small>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-4">Total Pekerjaan Selesai</dt>
+            <dd class="col-sm-8">{{ report_data.total_jobs }}</dd>
+
+            <dt class="col-sm-4">Total Pendapatan Dihasilkan</dt>
+            <dd class="col-sm-8">Rp {{ report_data.total_revenue|floatformat:2 }}</dd>
+            
+            <dt class="col-sm-4">Jasa Paling Sering</dt>
+            <dd class="col-sm-8">{{ report_data.top_service }} ({{ report_data.top_service_count }} kali)</dd>
+        </dl>
+    </div>
+</div>
+{% elif request.method == 'POST' %}
+<div class="alert alert-warning">Tidak ditemukan data transaksi untuk mekanik dan periode yang dipilih.</div>
+{% else %}
+<div class="alert alert-info">Pilih mekanik dan rentang tanggal untuk melihat laporan kinerjanya.</div>
+{% endif %}
+
+<div class="mt-4">
+    <a href="{% url 'reports:report_index' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Kembali ke Pusat Laporan
+    </a>
+</div>
+{% endblock %}

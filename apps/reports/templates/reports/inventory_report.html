@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Laporan Stok Inventaris{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="bi bi-box-seam"></i> Laporan Stok Rendah</h1>
+        <p class="text-muted">Generated pada: {{ generated_date|date:"d M Y, H:i" }}</p>
+    </div>
+    <div>
+        <a href="{% url 'reports:export_inventory' %}" class="btn btn-outline-danger">
+            <i class="bi bi-file-earmark-pdf"></i> Export ke PDF
+        </a>
+        <button class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Cetak</button>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nama Item</th>
+                        <th class="text-center">Stok Saat Ini</th>
+                        <th class="text-center">Batas Order Ulang</th>
+                        <th class="text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td><strong>{{ item.name }}</strong><br><small class="text-muted">SKU: {{ item.sku|default:'-' }}</small></td>
+                        <td class="text-center fw-bold">{{ item.quantity }}</td>
+                        <td class="text-center">{{ item.reorder_threshold }}</td>
+                        <td class="text-center">
+                            {% if item.quantity == 0 %}
+                                <span class="badge bg-danger">Habis</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Stok Rendah</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <h5><i class="bi bi-check-circle-fill text-success"></i> Semua stok aman!</h5>
+                            <p>Tidak ada item yang berada di bawah ambang batas order ulang.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'reports:report_index' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Kembali ke Pusat Laporan
+    </a>
+</div>
+{% endblock %}

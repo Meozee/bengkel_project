@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Pusat Laporan{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-file-earmark-bar-graph-fill"></i> Pusat Laporan</h1>
+</div>
+
+<p class="lead text-muted">Pilih jenis laporan yang ingin Anda generate untuk analisis bisnis.</p>
+
+<div class="row g-4 mt-3">
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 text-center shadow-sm report-card">
+            <div class="card-body">
+                <i class="bi bi-cash-coin fs-1 text-success"></i>
+                <h5 class="card-title mt-3">Laporan Keuangan</h5>
+                <p class="card-text text-muted">Analisis pendapatan, pengeluaran, dan laba bersih dalam periode tertentu.</p>
+                <a href="{% url 'reports:financial_report' %}" class="btn btn-success stretched-link">Generate Laporan</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 text-center shadow-sm report-card">
+            <div class="card-body">
+                <i class="bi bi-box-seam fs-1 text-warning"></i>
+                <h5 class="card-title mt-3">Laporan Inventaris</h5>
+                <p class="card-text text-muted">Lihat daftar item dengan stok rendah atau habis.</p>
+                <a href="{% url 'reports:inventory_report' %}" class="btn btn-warning stretched-link">Generate Laporan</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 text-center shadow-sm report-card">
+            <div class="card-body">
+                <i class="bi bi-person-gear fs-1 text-info"></i>
+                <h5 class="card-title mt-3">Kinerja Mekanik</h5>
+                <p class="card-text text-muted">Evaluasi jumlah pekerjaan dan pendapatan yang dihasilkan oleh mekanik.</p>
+                <a href="{% url 'reports:mechanic_performance' %}" class="btn btn-info stretched-link">Generate Laporan</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 text-center shadow-sm report-card">
+            <div class="card-body">
+                <i class="bi bi-person-gear fs-1 text-info"></i>
+                <h5 class="card-title mt-3">Laporan pelnaggan</h5>
+                <p class="card-text text-muted">Evaluasi jumlah pelanggan.</p>
+                <a href="{% url 'reports:customer_report' %}" class="btn btn-info stretched-link">Generate Laporan</a>
+            </div>
+        </div>
+    </div>
+    </div>
+{% endblock %}
