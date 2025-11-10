@@ -27,7 +27,7 @@
                         <td><strong>{{ category.name }}</strong></td>
                         <td>{{ category.description|default:"-" }}</td>
                         <td class="text-end">
-                            <a href="{% url 'inventory:category_edit' category.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                            <a href="{% url 'inventory:category_update' category.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
                                 <i class="bi bi-pencil"></i> Edit
                             </a>
                             <a href="{% url 'inventory:category_delete' category.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus">

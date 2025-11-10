@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% load humanize %} {# Pastikan load humanize untuk format angka (intcomma) #}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ title }}</h1>
+
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fas fa-edit"></i> Detail Item
+                </div>
+                <div class="card-body">
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        {% if form.instance.pk %}
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Stok Saat Ini (Otomatis)</label>
+                                    <input type="text" class="form-control" value="{{ form.instance.quantity }}" readonly disabled>
+                                    <div class="form-text">Stok hanya bisa diubah via PO atau Transaksi.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Harga Modal Rata-rata (Otomatis)</label>
+                                    <input type="text" class="form-control" value="Rp {{ form.instance.buy_price|intcomma }}" readonly disabled>
+                                    <div class="form-text">Harga modal dihitung otomatis via PO (WAC).</div>
+                                </div>
+                            </div>
+                            <hr>
+                        {% endif %}
+                        
+                        {% crispy form %}
+                        
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'inventory:inventory_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Batal
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Simpan Perubahan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        {% if not form.instance.pk %}
+        <div class="col-lg-4">
+            <div class="alert alert-info" role="alert">
+                <h4 class="alert-heading"><i class="fas fa-info-circle"></i> Catatan</h4>
+                <p>
+                    Anda sedang menambahkan item baru.
+                </p>
+                <hr>
+                <p class="mb-0">
+                    <strong>Stok Awal</strong> dan <strong>Harga Modal Awal</strong> akan otomatis diatur ke <strong>0</strong>.
+                    Stok akan bertambah ketika Anda membuat Purchase Order (PO).
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

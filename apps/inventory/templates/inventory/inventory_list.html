@@ -1,97 +1,99 @@
 {% extends "base.html" %}
+{% load humanize %}
 
 {% block title %}Daftar Inventaris{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-box-seam"></i> Daftar Inventaris</h1>
-    {# TOMBOL INI DIGANTI #}
-    <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-tags"></i> Kelola Kategori
-    </a>
-</div>
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Daftar Inventaris</h1>
 
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="get" action="{% url 'inventory:inventory_list' %}">
-            <div class="row g-3 align-items-end">
+    <div class="mb-3">
+        <a href="{% url 'inventory:inventory_add' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Tambah Item Baru
+        </a>
+        <a href="{% url 'inventory:category_list' %}" class="btn btn-secondary">
+            <i class="fas fa-tags"></i> Kelola Kategori
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-filter"></i> Filter & Pencarian
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{% url 'inventory:inventory_list' %}" class="row g-3">
                 <div class="col-md-4">
-                    <label for="q" class="form-label">Cari Nama/SKU</label>
-                    <input type="text" name="q" id="q" class="form-control" value="{{ current_query }}">
+                    <input type="text" name="q" class="form-control" placeholder="Cari nama atau SKU..." value="{{ current_query }}">
                 </div>
                 <div class="col-md-3">
-                    <label for="category" class="form-label">Kategori</label>
-                    <select name="category" id="category" class="form-select">
+                    <select name="category" class="form-select">
                         <option value="">Semua Kategori</option>
                         {% for cat in categories %}
-                        <option value="{{ cat.pk }}" {% if current_category == cat.pk %}selected{% endif %}>
+                        <option value="{{ cat.id }}" {% if current_category == cat.id %}selected{% endif %}>
                             {{ cat.name }}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label for="stock_status" class="form-label">Status Stok</label>
-                    <select name="stock_status" id="stock_status" class="form-select">
-                        <option value="">Semua Status</option>
-                        <option value="low" {% if current_stock_status == 'low' %}selected{% endif %}>
-                            Stok Rendah
-                        </option>
+                    <select name="stock_status" class="form-select">
+                        <option value="">Semua Stok</option>
+                        <option value="low" {% if current_stock_status == 'low' %}selected{% endif %}>Stok Rendah</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-info w-100">Filter</button>
-                    <a href="{% url 'inventory:inventory_list' %}" class="btn btn-secondary w-100 mt-1">Reset</a>
+                    <button type="submit" class="btn btn-outline-primary w-100">Cari</button>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
 
-<div class="table-responsive">
-    <table class="table table-hover align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>Nama</th>
-                <th>Kategori</th>
-                <th>SKU</th>
-                <th>Harga Beli</th>
-                <th>Harga Jual</th>
-                <th>Stok</th>
-                <th>Status</th>
-                <th class="text-end">Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td><strong>{{ item.name }}</strong></td>
-                <td>{{ item.category.name|default:"-" }}</td>
-                <td><span class="font-monospace">{{ item.sku|default:"-" }}</span></td>
-                <td>Rp {{ item.buy_price|floatformat:2 }}</td>
-                <td>Rp {{ item.sell_price|floatformat:2 }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>
-                    {% if item.is_low_stock %}
-                        <span class="badge bg-danger">Stok Rendah</span>
-                    {% else %}
-                        <span class="badge bg-success">Aman</span>
-                    {% endif %}
-                </td>
-                <td class="text-end">
-                    <a href="{% url 'inventory:inventory_detail' item.pk %}" class="btn btn-sm btn-outline-secondary" title="Detail"><i class="bi bi-eye"></i></a>
-                    <a href="{% url 'inventory:inventory_update' item.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
-                    <a href="{% url 'inventory:inventory_delete' item.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="8" class="text-center py-4">
-                    <p class="text-muted">Tidak ada item inventaris yang cocok dengan kriteria.</p>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-warehouse"></i> Daftar Item
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nama Item</th>
+                            <th>SKU</th>
+                            <th>Kategori</th>
+                            <th>Stok</th>
+                            <th>Harga Modal (Avg)</th>
+                            <th>Harga Jual</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr class="{% if item.is_low_stock %}table-danger{% endif %}">
+                            <td>
+                                <a href="{% url 'inventory:inventory_detail' item.pk %}">{{ item.name }}</a>
+                                {% if item.is_low_stock %}
+                                    <span class="badge bg-danger ms-2">Stok Rendah</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.sku|default:"-" }}</td>
+                            <td>{{ item.category.name|default:"-" }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>Rp {{ item.buy_price|intcomma }}</td>
+                            <td>Rp {{ item.sell_price|intcomma }}</td>
+                            <td>
+                                <a href="{% url 'inventory:inventory_update' item.pk %}" class="btn btn-sm btn-outline-warning">Edit</a>
+                                <a href="{% url 'inventory:inventory_delete' item.pk %}" class="btn btn-sm btn-outline-danger">Hapus</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">Belum ada item inventaris.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
