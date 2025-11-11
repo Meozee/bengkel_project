@@ -97,10 +97,12 @@
         </div>
     </div>
     
-    <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'js/main.js' %}"></script>
-    
-    {% block scripts %}{% endblock %}
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    {% block extra_scripts %}{% endblock %}
 
 </body>
 </html>

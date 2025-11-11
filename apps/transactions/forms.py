@@ -1,4 +1,5 @@
 # ===== apps/transactions/forms.py =====
+
 from django import forms
 from django.forms import inlineformset_factory
 from .models import Transaction, TransactionItem, TransactionService
@@ -13,9 +14,9 @@ class TransactionForm(forms.ModelForm):
                  'transaction_date', 'other_charges', 'discount_amount', 'notes']
         widgets = {
             'invoice_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'customer': forms.Select(attrs={'class': 'form-select'}),
-            'vehicle': forms.Select(attrs={'class': 'form-select'}),
-            'mechanic': forms.Select(attrs={'class': 'form-select'}),
+            'customer': forms.Select(attrs={'class': 'form-select select-search'}), # Beri class untuk JS
+            'vehicle': forms.Select(attrs={'class': 'form-select select-search'}),  # Beri class untuk JS
+            'mechanic': forms.Select(attrs={'class': 'form-select select-search'}), # Beri class untuk JS
             'status': forms.Select(attrs={'class': 'form-select'}),
             'transaction_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'other_charges': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -29,22 +30,21 @@ class TransactionItemForm(forms.ModelForm):
         model = TransactionItem
         fields = ['item', 'quantity', 'unit_price', 'discount_percentage']
         widgets = {
-            'item': forms.HiddenInput(),
-            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'discount_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0, 'max': 100}),
+            # ✅ PERUBAHAN KRUSIAL:
+            # Ganti dari HiddenInput ke Select agar bisa dipakai TomSelect.
+            'item': forms.Select(attrs={'class': 'form-select item-search-input', 'placeholder': 'Cari item...'}),
+            
+            'quantity': forms.NumberInput(attrs={'class': 'form-control item-quantity-input', 'min': 1, 'step': 1}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control item-price-input', 'step': '0.01'}),
+            'discount_percentage': forms.NumberInput(attrs={'class': 'form-control item-discount-input', 'step': '0.01', 'min': 0, 'max': 100}),
         }
 
+    # Hapus validasi stok di sini, kita pindahkan ke view
+    # agar bisa skip validasi saat status 'PAID'
     def clean_quantity(self):
         quantity = self.cleaned_data.get('quantity')
-        item = self.cleaned_data.get('item')
-
-        # Skip validasi jika transaksi sudah PAID (edit mode)
-        if self.instance.pk and self.instance.transaction.status == 'PAID':
-            return quantity
-
-        if item and quantity > item.quantity:
-            raise forms.ValidationError(f"Stok tidak cukup untuk {item.name}. Sisa stok: {item.quantity}.")
+        if quantity and quantity < 1:
+            raise forms.ValidationError("Kuantitas tidak boleh kurang dari 1.")
         return quantity
 
 
@@ -53,14 +53,14 @@ class TransactionServiceForm(forms.ModelForm):
         model = TransactionService
         fields = ['service', 'quantity', 'unit_price', 'discount_percentage']
         widgets = {
-            'service': forms.Select(attrs={'class': 'form-select'}),
-            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'discount_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0, 'max': 100}),
+            'service': forms.Select(attrs={'class': 'form-select service-select-input select-search'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control service-quantity-input', 'min': 1, 'step': 1}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control service-price-input', 'step': '0.01'}),
+            'discount_percentage': forms.NumberInput(attrs={'class': 'form-control service-discount-input', 'step': '0.01', 'min': 0, 'max': 100}),
         }
 
 
-# Inline formset
+# Inline formset (Tidak berubah)
 TransactionItemFormSet = inlineformset_factory(
     Transaction, TransactionItem,
     form=TransactionItemForm,

@@ -1,163 +1,502 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% load humanize %}
 
-{% block title %}{% if transaction %}Edit Transaksi{% else %}Buat Transaksi Baru{% endif %}{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
 {% block extra_head %}
-  {# Ganti path static agar sesuai dengan struktur folder yang benar #}
-  <link rel="stylesheet" href="{% static 'css/transaction_form.css' %}">
+{# 1. Library Autocomplete (TomSelect) #}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+{# 2. CSS #}
+<style>
+    /* Agar dropdown TomSelect muncul di atas elemen lain */
+    .formset-row {
+        overflow: visible !important;
+        position: relative;
+    }
+    .ts-dropdown {
+        z-index: 9999 !important;
+    }
+    .template-row {
+        display: none !important;
+    }
+    /* Sembunyikan checkbox 'DELETE' asli */
+    input[type="checkbox"][name$="-DELETE"] {
+        display: none;
+    }
+</style>
 {% endblock %}
 
+
 {% block content %}
-<div class="container mt-4">
-  <form method="post" class="card shadow-sm">
-    {% csrf_token %}
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h4 class="mb-0">{% if transaction %}✏️ Edit Transaksi{% else %}➕ Buat Transaksi Baru{% endif %}</h4>
-    </div>
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ title }}</h1>
 
-    <div class="card-body p-4">
-      {% if form.errors or item_formset.errors or service_formset.errors %}
-        <div class="alert alert-danger">Harap perbaiki kesalahan yang ditandai di bawah.</div>
-      {% endif %}
-
-      <h5 class="border-bottom pb-2 mb-3">📄 Detail Utama</h5>
-      <div class="row g-3 mb-4">
-        <div class="col-md-4">{{ form.invoice_number.label_tag }}{{ form.invoice_number }}{{ form.invoice_number.errors }}</div>
-        <div class="col-md-4">{{ form.customer.label_tag }}{{ form.customer }}{{ form.customer.errors }}</div>
-        <div class="col-md-4">{{ form.vehicle.label_tag }}{{ form.vehicle }}{{ form.vehicle.errors }}</div>
-        <div class="col-md-4">{{ form.mechanic.label_tag }}{{ form.mechanic }}{{ form.mechanic.errors }}</div>
-        <div class="col-md-4">{{ form.status.label_tag }}{{ form.status }}{{ form.status.errors }}</div>
-        <div class="col-md-4">{{ form.transaction_date.label_tag }}{{ form.transaction_date }}{{ form.transaction_date.errors }}</div>
-        <div class="col-12">{{ form.notes.label_tag }}{{ form.notes }}{{ form.notes.errors }}</div>
-      </div>
-
-      <h5 class="border-bottom pb-2 mb-3">🧰 Detail Item Barang</h5>
-      {{ item_formset.management_form }}
-      <div class="table-responsive">
-        <table class="table table-sm align-middle">
-          <thead class="table-light">
-            <tr>
-              <th style="width: 35%;">Item</th>
-              <th style="width: 15%;">Kuantitas</th>
-              <th style="width: 20%;">Harga Satuan</th>
-              <th style="width: 15%;">Diskon (%)</th>
-              <th style="width: 15%;" class="text-end">Subtotal</th>
-              <th style="width: 5%;" class="text-center">Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="item-formset-body">
-            {% for form in item_formset %}
-              <tr class="item-form-row">
-                <td class="autocomplete-container">
-                  {{ form.id }}
-                  {{ form.item }} {# Ini adalah input hidden untuk ID item #}
-                  <input type="text" class="form-control item-autocomplete" placeholder="Ketik untuk mencari..." value="{% if form.instance.item %}{{ form.instance.item.name }}{% endif %}">
-                  {{ form.item.errors }}
-                </td>
-                <td>{{ form.quantity }}{{ form.quantity.errors }}</td>
-                <td>{{ form.unit_price }}{{ form.unit_price.errors }}</td>
-                <td>{{ form.discount_percentage }}{{ form.discount_percentage.errors }}</td>
-                <td><input type="text" readonly class="form-control-plaintext text-end subtotal-field" value="Rp 0"></td>
-                <td class="text-center">
-                  {{ form.DELETE }} {# Checkbox ini akan disembunyikan oleh CSS #}
-                  <button type="button" class="btn btn-sm btn-outline-danger remove-form-row">×</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <button type="button" class="btn btn-sm btn-outline-primary mb-4" id="add-item-btn">+ Tambah Item</button>
-
-      <h5 class="border-bottom pb-2 mb-3">🔧 Detail Jasa/Service</h5>
-      {{ service_formset.management_form }}
-      <div class="table-responsive">
-        <table class="table table-sm align-middle">
-          <thead class="table-light">
-            <tr>
-              <th style="width: 35%;">Service</th>
-              <th style="width: 15%;">Kuantitas</th>
-              <th style="width: 20%;">Harga</th>
-              <th style="width: 15%;">Diskon (%)</th>
-              <th style="width: 15%;" class="text-end">Subtotal</th>
-              <th style="width: 5%;" class="text-center">Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="service-formset-body">
-            {% for form in service_formset %}
-              <tr class="service-form-row">
-                <td>{{ form.id }}{{ form.service }}{{ form.service.errors }}</td>
-                <td>{{ form.quantity }}{{ form.quantity.errors }}</td>
-                <td>{{ form.unit_price }}{{ form.unit_price.errors }}</td>
-                <td>{{ form.discount_percentage }}{{ form.discount_percentage.errors }}</td>
-                <td><input type="text" readonly class="form-control-plaintext text-end subtotal-field" value="Rp 0"></td>
-                <td class="text-center">
-                  {{ form.DELETE }} {# Checkbox ini akan disembunyikan oleh CSS #}
-                  <button type="button" class="btn btn-sm btn-outline-danger remove-form-row">×</button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <button type="button" class="btn btn-sm btn-outline-primary mb-4" id="add-service-btn">+ Tambah Service</button>
-
-      <h5 class="border-bottom pb-2 mb-3">💰 Finansial</h5>
-      <div class="row g-3 mb-3 justify-content-end">
-        <div class="col-md-4">{{ form.other_charges.label_tag }}{{ form.other_charges }}</div>
-        <div class="col-md-4">{{ form.discount_amount.label_tag }}{{ form.discount_amount }}</div>
-        <div class="col-md-4">
-          <label class="form-label fw-bold">Total Akhir</label>
-          <input type="text" readonly class="form-control fw-bold fs-5 text-end" id="grand-total" value="Rp 0">
+    <form method="POST" id="transaction-form">
+        {% csrf_token %}
+        
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <i class="fas fa-file-invoice"></i> Detail Transaksi
+            </div>
+            <div class="card-body">
+                {% crispy form %}
+            </div>
         </div>
-      </div>
-    </div>
 
-    <div class="card-footer text-end">
-      <a href="{% url 'transactions:transaction_list' %}" class="btn btn-outline-secondary px-4">Batal</a>
-      <button type="submit" class="btn btn-success px-4">Simpan Transaksi</button>
-    </div>
-  </form>
+        {# ============ ITEM FORMSET ============ #}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <i class="fas fa-box"></i> 🚗 Detail Item Barang
+            </div>
+            <div class="card-body">
+                {{ item_formset.management_form }}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th style="width: 35%;">Item</th>
+                                <th style="width: 10%;">Kuantitas</th>
+                                <th style="width: 20%;">Harga Satuan</th>
+                                <th style="width: 15%;">Diskon (%)</th>
+                                <th style="width: 15%;">Subtotal</th>
+                                <th style="width: 5%;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="item-formset-container">
+                            {# Template tersembunyi untuk clone #}
+                            <tr class="formset-row item-row template-row" id="item-template">
+                                <td>
+                                    <select id="id_items-__prefix__-item" class="form-select item-search-input" name="items-__prefix__-item">
+                                        <option value="">Pilih item...</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control item-quantity-input" 
+                                           name="items-__prefix__-quantity" id="id_items-__prefix__-quantity"
+                                           min="1" step="1" value="1">
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control item-price-input" 
+                                           name="items-__prefix__-unit_price" id="id_items-__prefix__-unit_price"
+                                           step="0.01" value="0">
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control item-discount-input" 
+                                           name="items-__prefix__-discount_percentage" id="id_items-__prefix__-discount_percentage"
+                                           step="0.01" min="0" max="100" value="0">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control subtotal-field" readonly value="Rp 0" style="background-color: #e9ecef;">
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-danger btn-sm remove-item-btn">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            
+                            {# Existing forms dari Django #}
+                            {% for form_item in item_formset %}
+                                <tr class="formset-row item-row" data-form-index="{{ forloop.counter0 }}">
+                                    {{ form_item.id }}
+                                    <td>{{ form_item.item }}</td>
+                                    <td>{{ form_item.quantity }}</td>
+                                    <td>{{ form_item.unit_price }}</td>
+                                    <td>{{ form_item.discount_percentage }}</td>
+                                    <td>
+                                        <input type="text" class="form-control subtotal-field" readonly value="Rp 0" style="background-color: #e9ecef;">
+                                    </td>
+                                    <td>
+                                        {% if form_item.instance.pk %}
+                                            {{ form_item.DELETE }}
+                                            <button type="button" class="btn btn-danger btn-sm remove-item-btn">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% else %}
+                                            <button type="button" class="btn btn-danger btn-sm remove-item-btn">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" id="add-item-btn" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-plus"></i> Tambah Item
+                </button>
+            </div>
+        </div>
 
-  <table style="display: none;">
-    <tbody id="item-form-template">
-      <tr class="item-form-row">
-        <td class="autocomplete-container">
-          {{ item_formset.empty_form.id }}
-          {{ item_formset.empty_form.item }}
-          <input type="text" class="form-control item-autocomplete" placeholder="Ketik untuk mencari...">
-        </td>
-        <td>{{ item_formset.empty_form.quantity }}</td>
-        <td>{{ item_formset.empty_form.unit_price }}</td>
-        <td>{{ item_formset.empty_form.discount_percentage }}</td>
-        <td><input type="text" readonly class="form-control-plaintext text-end subtotal-field" value="Rp 0"></td>
-        <td class="text-center">
-          <button type="button" class="btn btn-sm btn-outline-danger remove-form-row">×</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+        {# ============ SERVICE FORMSET ============ #}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <i class="fas fa-wrench"></i> 🛠️ Detail Jasa/Service
+            </div>
+            <div class="card-body">
+                {{ service_formset.management_form }}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th style="width: 35%;">Service</th>
+                                <th style="width: 10%;">Kuantitas</th>
+                                <th style="width: 20%;">Harga</th>
+                                <th style="width: 15%;">Diskon (%)</th>
+                                <th style="width: 15%;">Subtotal</th>
+                                <th style="width: 5%;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="service-formset-container">
+                            {# Template tersembunyi untuk clone #}
+                            <tr class="formset-row service-row template-row" id="service-template">
+                                <td>
+                                    <select id="id_services-__prefix__-service" class="form-select service-search-input" name="services-__prefix__-service">
+                                        <option value="">Pilih service...</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control service-quantity-input" 
+                                           name="services-__prefix__-quantity" id="id_services-__prefix__-quantity"
+                                           min="1" step="1" value="1">
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control service-price-input" 
+                                           name="services-__prefix__-unit_price" id="id_services-__prefix__-unit_price"
+                                           step="0.01" value="0">
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control service-discount-input" 
+                                           name="services-__prefix__-discount_percentage" id="id_services-__prefix__-discount_percentage"
+                                           step="0.01" min="0" max="100" value="0">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control subtotal-field" readonly value="Rp 0" style="background-color: #e9ecef;">
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-danger btn-sm remove-service-btn">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            
+                            {# Existing forms dari Django #}
+                            {% for form_svc in service_formset %}
+                                <tr class="formset-row service-row" data-form-index="{{ forloop.counter0 }}">
+                                    {{ form_svc.id }}
+                                    <td>{{ form_svc.service }}</td>
+                                    <td>{{ form_svc.quantity }}</td>
+                                    <td>{{ form_svc.unit_price }}</td>
+                                    <td>{{ form_svc.discount_percentage }}</td>
+                                    <td>
+                                        <input type="text" class="form-control subtotal-field" readonly value="Rp 0" style="background-color: #e9ecef;">
+                                    </td>
+                                    <td>
+                                        {% if form_svc.instance.pk %}
+                                            {{ form_svc.DELETE }}
+                                            <button type="button" class="btn btn-danger btn-sm remove-service-btn">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% else %}
+                                            <button type="button" class="btn btn-danger btn-sm remove-service-btn">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" id="add-service-btn" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-plus"></i> Tambah Service
+                </button>
+            </div>
+        </div>
 
-  <table style="display: none;">
-    <tbody id="service-form-template">
-      <tr class="service-form-row">
-        <td>{{ service_formset.empty_form.id }}{{ service_formset.empty_form.service }}</td>
-        <td>{{ service_formset.empty_form.quantity }}</td>
-        <td>{{ service_formset.empty_form.unit_price }}</td>
-        <td>{{ service_formset.empty_form.discount_percentage }}</td>
-        <td><input type="text" readonly class="form-control-plaintext text-end subtotal-field" value="Rp 0"></td>
-        <td class="text-center">
-          <button type="button" class="btn btn-sm btn-outline-danger remove-form-row">×</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+        <div class="d-flex justify-content-between mb-4">
+            <a href="{% url 'transactions:transaction_list' %}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Batal
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> Simpan Transaksi
+            </button>
+        </div>
+
+    </form>
 </div>
 {% endblock %}
 
 
-{% block scripts %}
-  {# Pastikan path static ini benar sesuai struktur folder kamu #}
-  <script src="{% static 'js/transaction_form.js' %}"></script>
+{% block extra_scripts %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    
+    // ===================================
+    // Helper Functions
+    // ===================================
+    
+    function formatCurrency(num) {
+        return "Rp " + parseFloat(num).toLocaleString('id-ID', {
+            minimumFractionDigits: 0, 
+            maximumFractionDigits: 0
+        });
+    }
+
+    function calculateRowSubtotal($row) {
+        var qty = parseFloat($row.find('.item-quantity-input, .service-quantity-input').val()) || 0;
+        var price = parseFloat($row.find('.item-price-input, .service-price-input').val()) || 0;
+        var discount = parseFloat($row.find('.item-discount-input, .service-discount-input').val()) || 0;
+
+        var subtotal = (qty * price) * (1 - (discount / 100));
+        $row.find('.subtotal-field').val(formatCurrency(subtotal));
+    }
+
+    // ===================================
+    // TomSelect Initialization
+    // ===================================
+    
+    // Inisialisasi untuk ITEM (AJAX search)
+    function initializeItemTomSelect(element) {
+        if (!element || $(element).hasClass('tomselected')) return;
+        
+        new TomSelect(element, {
+            create: false,
+            dropdownParent: 'body',
+            placeholder: 'Ketik untuk mencari item...',
+            load: function(query, callback) {
+                if (!query.length) return callback();
+                fetch("{% url 'transactions:item_autocomplete' %}?q=" + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(json => callback(json))
+                    .catch(() => callback());
+            },
+            onChange: function(value) {
+                if (!value) return;
+                var selectedOption = this.options[value];
+                if (selectedOption) {
+                    var $row = $(element).closest('.formset-row');
+                    $row.find('.item-price-input').val(selectedOption.price || 0);
+                    $row.find('.item-quantity-input').val(1).focus();
+                    calculateRowSubtotal($row);
+                }
+            }
+        });
+    }
+
+    // Inisialisasi untuk SERVICE (AJAX search)
+    function initializeServiceTomSelect(element) {
+        if (!element || $(element).hasClass('tomselected')) return;
+        
+        new TomSelect(element, {
+            create: false,
+            dropdownParent: 'body',
+            placeholder: 'Ketik untuk mencari service...',
+            load: function(query, callback) {
+                if (!query.length) return callback();
+                // ✅ Gunakan URL autocomplete service
+                fetch("{% url 'transactions:service_autocomplete' %}?q=" + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(json => callback(json))
+                    .catch(() => callback());
+            },
+            onChange: function(value) {
+                if (!value) return;
+                var selectedOption = this.options[value];
+                if (selectedOption) {
+                    var $row = $(element).closest('.formset-row');
+                    // ✅ Targetkan class price yang benar
+                    $row.find('.service-price-input').val(selectedOption.price || 0);
+                    $row.find('.service-quantity-input').val(1).focus();
+                    calculateRowSubtotal($row);
+                }
+            }
+        });
+    }
+
+    // Inisialisasi untuk Dropdown standar (Customer, Vehicle, etc)
+    function initializeStandardTomSelect(element) {
+        if (!element || $(element).hasClass('tomselected')) return;
+        new TomSelect(element, {
+            create: false,
+            dropdownParent: 'body',
+            placeholder: 'Pilih...'
+        });
+    }
+
+    // ===================================
+    // Generic Add Row Function
+    // ===================================
+    
+    function addFormsetRow(config) {
+        var $container = $(config.container);
+        var $template = $(config.template);
+        var totalFormsInput = $(config.totalForms);
+        var totalForms = parseInt(totalFormsInput.val());
+
+        if ($template.length === 0) {
+            console.error('❌ Template tidak ditemukan! Selector:', config.template);
+            return;
+        }
+
+        var $newRow = $template.clone(true);
+        $newRow.removeAttr('id').removeClass('template-row');
+        $newRow.css('display', 'table-row');
+
+        $newRow.find('input, select, textarea').each(function() {
+            var name = $(this).attr('name');
+            var id = $(this).attr('id');
+            
+            if (name) {
+                $(this).attr('name', name.replace('__prefix__', totalForms));
+            }
+            if (id) {
+                $(this).attr('id', id.replace('__prefix__', totalForms));
+            }
+        });
+
+        $container.append($newRow);
+        totalFormsInput.val(totalForms + 1);
+        
+        // Panggil initializer khusus untuk row baru
+        if (config.initializer) {
+            var selectElement = $newRow.find(config.selectElement)[0];
+            if (selectElement) {
+                config.initializer(selectElement);
+            } else {
+                console.error('❌ Select element tidak ditemukan:', config.selectElement);
+            }
+        }
+    }
+
+    $('#add-item-btn').on('click', function(e) {
+        e.preventDefault();
+        addFormsetRow({
+            container: '#item-formset-container',
+            template: '#item-template',
+            totalForms: '#id_items-TOTAL_FORMS',
+            selectElement: '.item-search-input',
+            initializer: initializeItemTomSelect
+        });
+    });
+
+    $('#add-service-btn').on('click', function(e) {
+        e.preventDefault();
+        addFormsetRow({
+            container: '#service-formset-container',
+            template: '#service-template',
+            totalForms: '#id_services-TOTAL_FORMS',
+            selectElement: '.service-search-input',
+            initializer: initializeServiceTomSelect // ✅ Gunakan initializer service
+        });
+    });
+
+    // ===================================
+    // Generic Remove Row Function
+    // ===================================
+    
+    function removeFormsetRow($row, config) {
+        if ($row.hasClass('template-row')) return;
+        
+        var $deleteCheckbox = $row.find('input[name$="-DELETE"]');
+        
+        if ($deleteCheckbox.length) {
+            // Ini baris yang sudah ada (dari database)
+            // Centang checkbox dan sembunyikan baris
+            $deleteCheckbox.prop('checked', true);
+            $row.hide();
+        } else {
+            // Ini baris baru, hapus dari DOM
+            $row.remove();
+            
+            // Update TOTAL_FORMS
+            var $totalFormsInput = $(config.totalForms);
+            var totalForms = parseInt($totalFormsInput.val()) - 1;
+            $totalFormsInput.val(totalForms);
+            
+            // Re-index baris yang tersisa
+            var index = 0;
+            $(config.container + ' .formset-row:visible').not('.template-row').each(function() {
+                $(this).find('input, select, textarea').each(function() {
+                    var name = $(this).attr('name');
+                    var id = $(this).attr('id');
+                    
+                    if (name) {
+                        $(this).attr('name', name.replace(new RegExp(config.prefix + '-\\d+-'), config.prefix + '-' + index + '-'));
+                    }
+                    if (id) {
+                        $(this).attr('id', id.replace(new RegExp('id_' + config.prefix + '-\\d+-'), 'id_' + config.prefix + '-' + index + '-'));
+                    }
+                });
+                index++;
+            });
+        }
+    }
+
+    $('#item-formset-container').on('click', '.remove-item-btn', function() {
+        var $row = $(this).closest('.formset-row');
+        removeFormsetRow($row, {
+            totalForms: '#id_items-TOTAL_FORMS',
+            container: '#item-formset-container',
+            prefix: 'items'
+        });
+    });
+
+    $('#service-formset-container').on('click', '.remove-service-btn', function() {
+        var $row = $(this).closest('.formset-row');
+        removeFormsetRow($row, {
+            totalForms: '#id_services-TOTAL_FORMS',
+            container: '#service-formset-container',
+            prefix: 'services'
+        });
+    });
+
+    // ===================================
+    // Subtotal Calculation
+    // ===================================
+    
+    $(document).on('input', 
+        '.item-quantity-input, .item-price-input, .item-discount-input, ' + 
+        '.service-quantity-input, .service-price-input, .service-discount-input', 
+        function() {
+            calculateRowSubtotal($(this).closest('.formset-row'));
+        }
+    );
+
+    // ===================================
+    // Initialization on Page Load
+    // ===================================
+    
+    // Inisialisasi dropdown di form utama
+    $('.select-search').not('.template-row *').each(function() {
+        initializeStandardTomSelect(this);
+    });
+
+    // Inisialisasi TomSelect untuk BARIS YANG SUDAH ADA
+    $('.item-row:visible').not('.template-row').find('.item-search-input').each(function() {
+        initializeItemTomSelect(this);
+    });
+    
+    $('.service-row:visible').not('.template-row').find('.service-select-input').each(function() {
+        // ✅ Ganti ke service initializer
+        // (Kita asumsikan class di forms.py untuk service select adalah 'service-select-input'
+        // dan BUKAN 'service-search-input' seperti di template. Kita samakan saja.)
+        // Saya perbaiki di HTML template di atas, class-nya 'service-search-input'
+        initializeServiceTomSelect(this); 
+    });
+    
+    // Hitung subtotal untuk BARIS YANG SUDAH ADA
+    $('.formset-row:visible').not('.template-row').each(function() {
+        calculateRowSubtotal($(this));
+    });
+
+    console.log('Form initialized (v2)');
+});
+</script>
 {% endblock %}

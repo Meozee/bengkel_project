@@ -9,7 +9,8 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db.models import Sum, Count, F, Q, Case, When, DecimalField
-from django.db.models.functions import TruncDay
+# ✅ IMPORT TruncMonth
+from django.db.models.functions import TruncDay, TruncMonth
 
 # Import semua model yang relevan
 from apps.transactions.models import Transaction, TransactionItem, TransactionService
@@ -17,7 +18,7 @@ from apps.expenses.models import Expense
 from apps.purchases.models import PurchaseOrder
 # BENAR:
 from apps.master_data.models import Mechanic, Customer, Service, Vendor
-from apps.inventory.models import InventoryItem # <-- Pindahkan InventoryItem ke sini
+from apps.inventory.models import InventoryItem
 @login_required
 def dashboard_view(request):
     
@@ -103,11 +104,15 @@ def dashboard_view(request):
             
     # --- 3. Data Grafik Tren (Line Chart) ---
     
-    # Kita akan siapkan data harian jika rentang waktunya ada
-    tren_pemasukan_data = {}
-    tren_pengeluaran_data = {}
+    # ✅ Inisialisasi variabel di luar blok if
+    tren_labels = []
+    tren_pemasukan_data = []
+    tren_pengeluaran_data = []
     
     if start_date:
+        # Jika ada rentang tanggal (Bulan Ini, Bulan Lalu, Custom), grup by HARI
+        date_format = '%Y-%m-%d'
+        
         # Pemasukan harian
         pemasukan_harian = Transaction.objects.filter(
             q_filter_transaksi, status=Transaction.StatusChoices.PAID
@@ -139,16 +144,16 @@ def dashboard_view(request):
         # 1. Buat map untuk pengeluaran
         pengeluaran_map = {}
         for item in expense_harian:
-            day_str = item['day'].strftime('%Y-%m-%d')
+            day_str = item['day'].strftime(date_format)
             pengeluaran_map[day_str] = item['total']
         for item in purchase_harian:
-            day_str = item['day'].strftime('%Y-%m-%d')
+            day_str = item['day'].strftime(date_format)
             pengeluaran_map[day_str] = pengeluaran_map.get(day_str, Decimal('0.00')) + item['total']
             
         # 2. Buat map untuk pemasukan
         pemasukan_map = {}
         for item in pemasukan_harian:
-            day_str = item['day'].strftime('%Y-%m-%d')
+            day_str = item['day'].strftime(date_format)
             pemasukan_map[day_str] = item['total']
 
         # 3. Dapatkan semua label hari unik
@@ -157,6 +162,55 @@ def dashboard_view(request):
         tren_labels = all_days
         tren_pemasukan_data = [float(pemasukan_map.get(day, 0)) for day in all_days]
         tren_pengeluaran_data = [float(pengeluaran_map.get(day, 0)) for day in all_days]
+
+    else:
+        # ✅ Jika 'keseluruhan', grup by BULAN
+        date_format = '%Y-%m'
+        
+        pemasukan_bulanan = Transaction.objects.filter(
+            q_filter_transaksi, status=Transaction.StatusChoices.PAID
+        ).annotate(
+            month=TruncMonth('transaction_date')
+        ).values('month').annotate(
+            total=Sum('total_amount')
+        ).order_by('month')
+
+        expense_bulanan = Expense.objects.filter(
+            q_filter_expense
+        ).annotate(
+            month=TruncMonth('date')
+        ).values('month').annotate(
+            total=Sum('amount')
+        ).order_by('month')
+
+        purchase_bulanan = PurchaseOrder.objects.filter(
+            q_filter_purchase, status=PurchaseOrder.StatusChoices.COMPLETED
+        ).annotate(
+            month=TruncMonth('order_date')
+        ).values('month').annotate(
+            total=Sum('total_amount')
+        ).order_by('month')
+
+        # Gabungkan data
+        pengeluaran_map = {}
+        for item in expense_bulanan:
+            month_str = item['month'].strftime(date_format)
+            pengeluaran_map[month_str] = item['total']
+        for item in purchase_bulanan:
+            month_str = item['month'].strftime(date_format)
+            pengeluaran_map[month_str] = pengeluaran_map.get(month_str, Decimal('0.00')) + item['total']
+        
+        pemasukan_map = {}
+        for item in pemasukan_bulanan:
+            month_str = item['month'].strftime(date_format)
+            pemasukan_map[month_str] = item['total']
+
+        all_months = sorted(list(set(pemasukan_map.keys()) | set(pengeluaran_map.keys())))
+        
+        tren_labels = all_months
+        tren_pemasukan_data = [float(pemasukan_map.get(month, 0)) for month in all_months]
+        tren_pengeluaran_data = [float(pengeluaran_map.get(month, 0)) for month in all_months]
+
 
     # --- 4. Distribusi Kategori (Donut Charts) ---
 
@@ -277,10 +331,10 @@ def dashboard_view(request):
         'laba_bersih': laba_bersih,
         'persentase_perubahan': persentase_perubahan,
         
-        # Data untuk JSON di template
-        'tren_labels_json': json.dumps(tren_labels) if start_date else json.dumps([]),
-        'tren_pemasukan_data_json': json.dumps(tren_pemasukan_data) if start_date else json.dumps([]),
-        'tren_pengeluaran_data_json': json.dumps(tren_pengeluaran_data) if start_date else json.dumps([]),
+        # ✅ Hapus 'if start_date' dari sini
+        'tren_labels_json': json.dumps(tren_labels),
+        'tren_pemasukan_data_json': json.dumps(tren_pemasukan_data),
+        'tren_pengeluaran_data_json': json.dumps(tren_pengeluaran_data),
         
         'dist_pemasukan_labels_json': json.dumps(dist_pemasukan_labels),
         'dist_pemasukan_data_json': json.dumps(dist_pemasukan_data),

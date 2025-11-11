@@ -1,4 +1,4 @@
-# apps/transactions/admin.py
+# ===== apps/transactions/admin.py (SUDAH DIPERBAIKI) =====
 
 from django.contrib import admin
 from .models import Transaction, TransactionItem, TransactionService
@@ -13,7 +13,8 @@ class TransactionServiceInline(admin.TabularInline):
     model = TransactionService
     extra = 1
     # Tampilkan field baru di inline
-    fields = ('service', 'price', 'discount_percentage')
+    # ✅ PERBAIKAN: Ganti 'price' menjadi 'unit_price' dan tambahkan 'quantity'
+    fields = ('service', 'quantity', 'unit_price', 'discount_percentage') 
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
