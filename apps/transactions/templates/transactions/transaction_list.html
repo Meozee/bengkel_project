@@ -1,106 +1,206 @@
-{% extends "base.html" %}
-{% load humanize %}
+{% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Daftar Transaksi{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <h1 class="mt-4">Daftar Transaksi</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-receipt me-2"></i>Daftar Transaksi</h2>
+    <a href="{% url 'transactions:transaction_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>Transaksi Baru
+    </a>
+</div>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="{% url 'transactions:transaction_create' %}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Buat Transaksi Baru
-        </a>
+<!-- Filter Section -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <i class="bi bi-funnel me-2"></i>Filter Pencarian
+            <button class="btn btn-sm btn-link float-end" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </h5>
     </div>
-
-    <div class="card shadow-sm mb-4">
-        <div class="card-header">
-            <i class="fas fa-filter"></i> Filter dan Pencarian
-        </div>
+    <div class="collapse show" id="filterCollapse">
         <div class="card-body">
-            <form method="GET" action="{% url 'transactions:transaction_list' %}">
+            <form method="get" action="{% url 'transactions:transaction_list' %}">
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="q" class="form-label">Cari (Invoice, Customer, Plat)</label>
-                        <input type="text" name="q" id="q" class="form-control" 
-                               value="{{ current_query|default:'' }}" 
-                               placeholder="Masukkan No. Invoice, Nama Customer, atau Plat Kendaraan...">
+                    <!-- Nama Pelanggan -->
+                    <div class="col-md-3">
+                        <label class="form-label">Nama Pelanggan</label>
+                        <input type="text" name="customer_name" class="form-control" 
+                               value="{{ filters.customer_name }}" placeholder="Cari pelanggan...">
                     </div>
-                    <div class="col-md-4">
-                        <label for="status" class="form-label">Status</label>
-                        <select name="status" id="status" class="form-select">
+                    
+                    <!-- Nama Mekanik -->
+                    <div class="col-md-3">
+                        <label class="form-label">Nama Mekanik</label>
+                        <input type="text" name="mechanic_name" class="form-control" 
+                               value="{{ filters.mechanic_name }}" placeholder="Cari mekanik...">
+                    </div>
+                    
+                    <!-- Plat Nomor -->
+                    <div class="col-md-3">
+                        <label class="form-label">Plat Nomor</label>
+                        <input type="text" name="license_plate" class="form-control" 
+                               value="{{ filters.license_plate }}" placeholder="Cari plat nomor...">
+                    </div>
+                    
+                    <!-- Jenis Motor -->
+                    <div class="col-md-3">
+                        <label class="form-label">Jenis Motor</label>
+                        <input type="text" name="vehicle_type" class="form-control" 
+                               value="{{ filters.vehicle_type }}" placeholder="Cari jenis motor...">
+                    </div>
+                    
+                    <!-- Status -->
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
                             <option value="">Semua Status</option>
-                            {% for value, display in status_choices %}
-                                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
-                                    {{ display }}
-                                </option>
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-info w-100">
-                            <i class="fas fa-search"></i> Cari
+                    
+                    <!-- Tanggal Dari -->
+                    <div class="col-md-3">
+                        <label class="form-label">Dari Tanggal</label>
+                        <input type="date" name="date_from" class="form-control" 
+                               value="{{ filters.date_from }}">
+                    </div>
+                    
+                    <!-- Tanggal Sampai -->
+                    <div class="col-md-3">
+                        <label class="form-label">Sampai Tanggal</label>
+                        <input type="date" name="date_to" class="form-control" 
+                               value="{{ filters.date_to }}">
+                    </div>
+                    
+                    <!-- Buttons -->
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="bi bi-search me-1"></i>Cari
                         </button>
+                        <button type="submit" name="this_month" value="1" class="btn btn-outline-secondary me-2">
+                            <i class="bi bi-calendar-month me-1"></i>Bulan Ini
+                        </button>
+                        <a href="{% url 'transactions:transaction_list' %}" class="btn btn-outline-danger">
+                            <i class="bi bi-x-circle me-1"></i>Reset
+                        </a>
                     </div>
                 </div>
             </form>
         </div>
     </div>
+</div>
 
-    <div class="card shadow-sm">
-        <div class="card-header">
-            <i class="fas fa-list"></i> Hasil Transaksi
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>No. Invoice</th>
-                            <th>Tanggal</th>
-                            <th>Customer</th>
-                            <th>Mekanik</th>
-                            <th>Status</th>
-                            <th>Total</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for trx in transactions %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'transactions:transaction_update' trx.pk %}">
-                                    <strong>{{ trx.invoice_number }}</strong>
+<!-- Messages -->
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Table -->
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Invoice</th>
+                        <th>Tanggal</th>
+                        <th>Pelanggan</th>
+                        <th>Kendaraan</th>
+                        <th>Mekanik</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr>
+                        <td><strong>{{ transaction.invoice_number }}</strong></td>
+                        <td>{{ transaction.transaction_date|date:"d M Y H:i" }}</td>
+                        <td>{{ transaction.customer.name|default:"-" }}</td>
+                        <td>
+                            {% if transaction.vehicle %}
+                                {{ transaction.vehicle.license_plate }}<br>
+                                <small class="text-muted">{{ transaction.vehicle.vehicle_type }}</small>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ transaction.mechanic.name|default:"-" }}</td>
+                        <td class="text-end">
+                            <strong>Rp {{ transaction.total_amount|floatformat:0 }}</strong>
+                        </td>
+                        <td>
+                            {% if transaction.status == 'PAID' %}
+                                <span class="badge bg-success">Lunas</span>
+                            {% elif transaction.status == 'PENDING' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% else %}
+                                <span class="badge bg-danger">Batal</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'transactions:transaction_edit' transaction.pk %}" 
+                                   class="btn btn-outline-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
                                 </a>
-                            </td>
-                            <td>{{ trx.transaction_date|date:"d M Y, H:i" }}</td>
-                            <td>{{ trx.customer.name|default:"-" }}</td>
-                            <td>{{ trx.mechanic.name|default:"-" }}</td>
-                            <td>
-                                {% if trx.status == 'PAID' %}
-                                    <span class="badge bg-success">{{ trx.get_status_display }}</span>
-                                {% elif trx.status == 'PENDING' %}
-                                    <span class="badge bg-warning text-dark">{{ trx.get_status_display }}</span>
-                                {% else %}
-                                    <span class="badge bg-danger">{{ trx.get_status_display }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end">Rp {{ trx.total_amount|intcomma }}</td>
-                            <td>
-                                <a href="{% url 'transactions:transaction_update' trx.pk %}" class="btn btn-sm btn-outline-warning" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center">Belum ada transaksi yang sesuai.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                                <button type="button" class="btn btn-outline-danger" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deleteModal{{ transaction.pk }}"
+                                        title="Hapus">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Delete Modal -->
+                            <div class="modal fade" id="deleteModal{{ transaction.pk }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Konfirmasi Hapus</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            Yakin ingin menghapus transaksi <strong>{{ transaction.invoice_number }}</strong>?
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                            <form method="post" action="{% url 'transactions:transaction_delete' transaction.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger">Hapus</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <i class="bi bi-inbox display-4 text-muted"></i>
+                            <p class="text-muted mt-2">Tidak ada data transaksi</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+
 {% endblock %}

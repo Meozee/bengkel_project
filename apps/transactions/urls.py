@@ -1,17 +1,17 @@
-# apps/transactions/urls.py
-
 from django.urls import path
 from . import views
 
 app_name = 'transactions'
 
 urlpatterns = [
-    path('', views.transaction_list_view, name='transaction_list'),
-    path('new/', views.transaction_create_or_update_view, name='transaction_create'),
-    path('<int:pk>/edit/', views.transaction_create_or_update_view, name='transaction_update'),
-
-    # URL untuk autocomplete (AJAX)
-    path('item-autocomplete/', views.item_autocomplete, name='item_autocomplete'),
-    # ✅ TAMBAHKAN URL INI
-    path('service-autocomplete/', views.service_autocomplete, name='service_autocomplete'),
+    # List dan CRUD
+    path('', views.transaction_list, name='transaction_list'),
+    path('create/', views.transaction_create, name='transaction_create'),
+    path('edit/<int:pk>/', views.transaction_edit, name='transaction_edit'),
+    path('delete/<int:pk>/', views.transaction_delete, name='transaction_delete'),
+    
+    # API endpoints untuk autocomplete dan autofill
+    path('api/search-items/', views.api_search_items, name='api_search_items'),
+    path('api/item-price/<int:item_id>/', views.api_get_item_price, name='api_get_item_price'),
+    path('api/service-price/<int:service_id>/', views.api_get_service_price, name='api_get_service_price'),
 ]
