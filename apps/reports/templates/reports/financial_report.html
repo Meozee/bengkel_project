@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Laporan Keuangan{% endblock %}
 
@@ -18,7 +19,7 @@
                     <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
                 </div>
                 <div class="col-md-4">
-                    <button type="submit" class="btn btn-primary w-100">Generate Laporan</button>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Generate Laporan</button>
                 </div>
             </div>
         </form>
@@ -27,36 +28,62 @@
 
 {% if report_data %}
 <div class="card shadow-sm">
-    <div class="card-header">
-        <h5>Hasil Laporan Periode: {{ report_data.start_date|date:"d M Y" }} - {{ report_data.end_date|date:"d M Y" }}</h5>
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Periode: {{ report_data.start_date|date:"d M Y" }} - {{ report_data.end_date|date:"d M Y" }}</h5>
     </div>
     <div class="card-body">
-        <dl class="row">
-            <dt class="col-sm-3 fs-5 text-success">Total Pendapatan</dt>
-            <dd class="col-sm-9 fs-5 text-success">Rp {{ report_data.total_income|floatformat:2 }}</dd>
+        <div class="table-responsive">
+            <table class="table table-borderless">
+                <tbody>
+                    <tr class="border-bottom">
+                        <td colspan="2" class="fw-bold text-uppercase text-success">Pendapatan (Revenue)</td>
+                    </tr>
+                    <tr>
+                        <td class="ps-4">Total Pendapatan Transaksi</td>
+                        <td class="text-end fw-bold text-success">Rp {{ report_data.total_income|intcomma }}</td>
+                    </tr>
+                    
+                    <tr class="border-bottom">
+                        <td colspan="2" class="fw-bold text-uppercase text-danger mt-4 pt-3">Beban & Pengeluaran</td>
+                    </tr>
+                    <tr>
+                        <td class="ps-4">(-) Pembelian Stok (HPP)</td>
+                        <td class="text-end text-danger">Rp {{ report_data.total_purchases|intcomma }}</td>
+                    </tr>
+                    <tr>
+                        <td class="ps-4">(-) Biaya Operasional (Gaji/Listrik/dll)</td>
+                        <td class="text-end text-danger">Rp {{ report_data.total_operational|intcomma }}</td>
+                    </tr>
+                    <tr class="bg-light">
+                        <td class="ps-4 fw-bold">Total Pengeluaran</td>
+                        <td class="text-end fw-bold text-danger">Rp {{ report_data.total_expenses|intcomma }}</td>
+                    </tr>
 
-            <dt class="col-sm-3 fs-5 text-danger">Total Pengeluaran</dt>
-            <dd class="col-sm-9 fs-5 text-danger">Rp {{ report_data.total_expenses|floatformat:2 }}</dd>
-            
-            <hr class="my-3">
-
-            <dt class="col-sm-3 fs-4 fw-bold">LABA BERSIH</dt>
-            <dd class="col-sm-9 fs-4 fw-bold">Rp {{ report_data.net_profit|floatformat:2 }}</dd>
-        </dl>
+                    <tr class="border-top border-bottom border-3">
+                        <td class="fw-bold fs-4 text-uppercase">Laba Bersih (Net Profit)</td>
+                        <td class="text-end fw-bold fs-4 {% if report_data.net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            Rp {{ report_data.net_profit|intcomma }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
     <div class="card-footer text-end">
-        <a href="{% url 'reports:export_financial' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-outline-success">
-            <i class="bi bi-file-earmark-excel"></i> Export ke Excel
+        <a href="{% url 'reports:export_financial' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel"></i> Export Excel
         </a>
     </div>
 </div>
 {% else %}
-<div class="alert alert-info">Pilih rentang tanggal dan klik "Generate Laporan" untuk melihat hasilnya.</div>
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i> Pilih rentang tanggal dan klik "Generate Laporan" untuk melihat hasilnya.
+</div>
 {% endif %}
 
 <div class="mt-4">
     <a href="{% url 'reports:report_index' %}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Kembali ke Pusat Laporan
+        <i class="bi bi-arrow-left"></i> Kembali
     </a>
 </div>
 {% endblock %}

@@ -1,486 +1,293 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load crispy_forms_tags %}
 
 {% block title %}{% if transaction %}Edit{% else %}Buat{% endif %} Transaksi{% endblock %}
 
 {% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 <style>
-    .item-search-results {
-        position: absolute;
-        z-index: 1000;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        max-height: 200px;
-        overflow-y: auto;
-        width: 100%;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .item-search-result {
-        padding: 8px 12px;
-        cursor: pointer;
-        border-bottom: 1px solid #f0f0f0;
-    }
-    .item-search-result:hover {
-        background-color: #f8f9fa;
-    }
-    .formset-row {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        border-left: 4px solid #0d6efd;
-    }
-    .delete-row {
-        border-left-color: #dc3545;
-        opacity: 0.6;
-    }
+    .formset-row.deleted { display: none; }
+    .select2-container { width: 100% !important; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <h2>
+<div class="container-fluid px-4 mb-5">
+    <h2 class="mt-4 mb-4">
         <i class="bi bi-receipt me-2"></i>
-        {% if transaction %}Edit Transaksi - {{ transaction.invoice_number }}{% else %}Transaksi Baru{% endif %}
+        {% if transaction %}Edit Transaksi {{ transaction.invoice_number }}{% else %}Transaksi Baru{% endif %}
     </h2>
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'transactions:transaction_list' %}">Transaksi</a></li>
-            <li class="breadcrumb-item active">{% if transaction %}Edit{% else %}Buat Baru{% endif %}</li>
-        </ol>
-    </nav>
-</div>
 
-<form method="post" id="transactionForm">
-    {% csrf_token %}
-    
-    <div class="row">
-        <!-- Informasi Transaksi -->
-        <div class="col-md-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Informasi Transaksi</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Pelanggan <span class="text-danger">*</span></label>
-                            {{ form.customer }}
-                            {% if form.customer.errors %}
-                                <div class="text-danger small">{{ form.customer.errors }}</div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Kendaraan</label>
-                            {{ form.vehicle }}
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Mekanik</label>
-                            {{ form.mechanic }}
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Tanggal Transaksi</label>
-                            {{ form.transaction_date }}
-                        </div>
-                        
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">Status</label>
-                            {{ form.status }}
-                        </div>
-                        
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">Catatan</label>
-                            {{ form.notes }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Items (Barang) -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Barang</h5>
-                </div>
-                <div class="card-body">
-                    {{ item_formset.management_form }}
-                    <div id="item-formset">
-                        {% for form in item_formset %}
-                        <div class="formset-row item-row" data-form-idx="{{ forloop.counter0 }}">
-                            <div class="row">
-                                <div class="col-md-5 mb-2">
-                                    <label class="form-label">Cari Item</label>
-                                    <div class="position-relative">
-                                        <input type="text" class="form-control item-search" 
-                                               placeholder="Ketik untuk mencari item..." 
-                                               data-idx="{{ forloop.counter0 }}">
-                                        <div class="item-search-results" id="search-results-{{ forloop.counter0 }}" style="display:none;"></div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-4 mb-2">
-                                    <label class="form-label">Item</label>
-                                    {{ form.item }}
-                                    {{ form.id }}
-                                </div>
-                                
-                                <div class="col-md-2 mb-2">
-                                    <label class="form-label">Qty</label>
-                                    {{ form.quantity }}
-                                </div>
-                                
-                                <div class="col-md-1 mb-2 d-flex align-items-end">
-                                    {% if not form.instance.pk %}
-                                    <button type="button" class="btn btn-danger btn-sm remove-item" title="Hapus">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="col-md-4 mb-2">
-                                    <label class="form-label">Harga Satuan</label>
-                                    {{ form.unit_price }}
-                                </div>
-                                
-                                <div class="col-md-3 mb-2">
-                                    <label class="form-label">Diskon (%)</label>
-                                    {{ form.discount_percentage }}
-                                </div>
-                                
-                                <div class="col-md-3 mb-2">
-                                    {% if form.DELETE %}
-                                    <label class="form-label">Hapus?</label>
-                                    {{ form.DELETE }}
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <button type="button" class="btn btn-outline-success btn-sm mt-2" id="add-item">
-                        <i class="bi bi-plus-circle me-1"></i>Tambah Item
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Services (Jasa) -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="bi bi-wrench me-2"></i>Layanan / Jasa</h5>
-                </div>
-                <div class="card-body">
-                    {{ service_formset.management_form }}
-                    <div id="service-formset">
-                        {% for form in service_formset %}
-                        <div class="formset-row service-row">
-                            <div class="row">
-                                <div class="col-md-5 mb-2">
-                                    <label class="form-label">Layanan</label>
-                                    {{ form.service }}
-                                    {{ form.id }}
-                                </div>
-                                
-                                <div class="col-md-2 mb-2">
-                                    <label class="form-label">Qty</label>
-                                    {{ form.quantity }}
-                                </div>
-                                
-                                <div class="col-md-4 mb-2">
-                                    <label class="form-label">Harga</label>
-                                    {{ form.unit_price }}
-                                </div>
-                                
-                                <div class="col-md-1 mb-2 d-flex align-items-end">
-                                    {% if not form.instance.pk %}
-                                    <button type="button" class="btn btn-danger btn-sm remove-service" title="Hapus">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="col-md-3 mb-2">
-                                    <label class="form-label">Diskon (%)</label>
-                                    {{ form.discount_percentage }}
-                                </div>
-                                
-                                <div class="col-md-3 mb-2">
-                                    {% if form.DELETE %}
-                                    <label class="form-label">Hapus?</label>
-                                    {{ form.DELETE }}
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <button type="button" class="btn btn-outline-info btn-sm mt-2" id="add-service">
-                        <i class="bi bi-plus-circle me-1"></i>Tambah Layanan
-                    </button>
+    <form method="post" id="transactionForm">
+        {% csrf_token %}
+        
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">Info Transaksi</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">{{ form.customer|as_crispy_field }}</div>
+                    <div class="col-md-4 mb-3">{{ form.vehicle|as_crispy_field }}</div>
+                    <div class="col-md-4 mb-3">{{ form.mechanic|as_crispy_field }}</div>
+                    <div class="col-12 mb-3">{{ form.notes|as_crispy_field }}</div>
                 </div>
             </div>
         </div>
-        
-        <!-- Summary -->
-        <div class="col-md-4">
-            <div class="card shadow-sm sticky-top" style="top: 20px;">
-                <div class="card-header bg-warning">
-                    <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Ringkasan</h5>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <span>Barang / Sparepart</span>
+                <button type="button" class="btn btn-light btn-sm text-success fw-bold" id="add-item">
+                    <i class="bi bi-plus-circle"></i> Tambah Barang
+                </button>
+            </div>
+            <div class="card-body p-0">
+                {{ item_formset.management_form }}
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="40%">Item</th>
+                                <th width="15%">Qty</th>
+                                <th width="20%">Harga (@)</th>
+                                <th width="15%">Disc %</th>
+                                <th width="10%">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="item-tbody">
+                            {% for form in item_formset %}
+                            <tr class="formset-row item-row">
+                                {{ form.id }}
+                                <td class="p-2">{{ form.item }}</td>
+                                <td class="p-2">{{ form.quantity }}</td>
+                                <td class="p-2">{{ form.unit_price }}</td>
+                                <td class="p-2">{{ form.discount_percentage }}</td>
+                                <td class="p-2 text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
+                                    <div class="d-none">{{ form.DELETE }}</div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label">Biaya Lain-lain</label>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <span>Jasa / Service</span>
+                <button type="button" class="btn btn-light btn-sm text-info fw-bold" id="add-service">
+                    <i class="bi bi-plus-circle"></i> Tambah Jasa
+                </button>
+            </div>
+            <div class="card-body p-0">
+                {{ service_formset.management_form }}
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="40%">Nama Jasa</th>
+                                <th width="15%">Qty</th>
+                                <th width="20%">Biaya (@)</th>
+                                <th width="15%">Disc %</th>
+                                <th width="10%">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="service-tbody">
+                            {% for form in service_formset %}
+                            <tr class="formset-row service-row">
+                                {{ form.id }}
+                                <td class="p-2">{{ form.service }}</td>
+                                <td class="p-2">{{ form.quantity }}</td>
+                                <td class="p-2">{{ form.unit_price }}</td>
+                                <td class="p-2">{{ form.discount_percentage }}</td>
+                                <td class="p-2 text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
+                                    <div class="d-none">{{ form.DELETE }}</div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm bg-light">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label>Biaya Lain-lain (Rp)</label>
                         {{ form.other_charges }}
                     </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Diskon Total</label>
+                    <div class="col-md-6">
+                        <label>Diskon Akhir (Rp)</label>
                         {{ form.discount_amount }}
                     </div>
-                    
-                    <hr>
-                    
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal Barang:</span>
-                        <strong id="items-subtotal">Rp 0</strong>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal Jasa:</span>
-                        <strong id="services-subtotal">Rp 0</strong>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Biaya Lain:</span>
-                        <strong id="other-charges-display">Rp 0</strong>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between mb-2 text-danger">
-                        <span>Diskon:</span>
-                        <strong id="discount-display">- Rp 0</strong>
-                    </div>
-                    
-                    <hr>
-                    
-                    <div class="d-flex justify-content-between mb-3">
-                        <h5>TOTAL:</h5>
-                        <h5 class="text-primary" id="grand-total">Rp 0</h5>
-                    </div>
-                    
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-save me-2"></i>Simpan Transaksi
-                        </button>
-                        <a href="{% url 'transactions:transaction_list' %}" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle me-2"></i>Batal
-                        </a>
-                    </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Total Estimasi: <span class="text-primary" id="grand-total">Rp 0</span></h4>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-save"></i> Simpan Transaksi
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
-</form>
+    </form>
+</div>
 
+<table style="display:none">
+    <tbody id="item-empty-form">
+        <tr class="formset-row item-row">
+            {{ item_formset.empty_form.id }}
+            <td class="p-2">{{ item_formset.empty_form.item }}</td>
+            <td class="p-2">{{ item_formset.empty_form.quantity }}</td>
+            <td class="p-2">{{ item_formset.empty_form.unit_price }}</td>
+            <td class="p-2">{{ item_formset.empty_form.discount_percentage }}</td>
+            <td class="p-2 text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
+                <div class="d-none">{{ item_formset.empty_form.DELETE }}</div>
+            </td>
+        </tr>
+    </tbody>
+    <tbody id="service-empty-form">
+        <tr class="formset-row service-row">
+            {{ service_formset.empty_form.id }}
+            <td class="p-2">{{ service_formset.empty_form.service }}</td>
+            <td class="p-2">{{ service_formset.empty_form.quantity }}</td>
+            <td class="p-2">{{ service_formset.empty_form.unit_price }}</td>
+            <td class="p-2">{{ service_formset.empty_form.discount_percentage }}</td>
+            <td class="p-2 text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
+                <div class="d-none">{{ service_formset.empty_form.DELETE }}</div>
+            </td>
+        </tr>
+    </tbody>
+</table>
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(document).ready(function() {
-    let itemFormCount = parseInt($('#id_items-TOTAL_FORMS').val());
-    let serviceFormCount = parseInt($('#id_services-TOTAL_FORMS').val());
-    
-    // Autofill harga item saat item dipilih dari dropdown
-    $(document).on('change', '.item-select', function() {
-        const itemId = $(this).val();
-        const row = $(this).closest('.item-row');
-        const priceInput = row.find('.unit-price');
-        
-        if (itemId) {
-            $.get(`/transactions/api/item-price/${itemId}/`, function(data) {
-                priceInput.val(data.sell_price);
-                calculateTotal();
-            });
-        }
-    });
-    
-    // Autofill harga service saat service dipilih
-    $(document).on('change', '.service-select', function() {
-        const serviceId = $(this).val();
-        const row = $(this).closest('.service-row');
-        const priceInput = row.find('.service-price');
-        
-        if (serviceId) {
-            $.get(`/transactions/api/service-price/${serviceId}/`, function(data) {
-                priceInput.val(data.price);
-                calculateTotal();
-            });
-        }
-    });
-    
-    // Search item functionality
-    let searchTimeout;
-    $(document).on('input', '.item-search', function() {
-        const input = $(this);
-        const query = input.val();
-        const idx = input.data('idx');
-        const resultsDiv = $(`#search-results-${idx}`);
-        
-        clearTimeout(searchTimeout);
-        
-        if (query.length < 2) {
-            resultsDiv.hide();
-            return;
-        }
-        
-        searchTimeout = setTimeout(function() {
-            $.get('/transactions/api/search-items/', {q: query}, function(data) {
-                if (data.results.length > 0) {
-                    let html = '';
-                    data.results.forEach(function(item) {
-                        html += `<div class="item-search-result" data-id="${item.id}" data-name="${item.name}" data-price="${item.sell_price}">
-                            <strong>${item.name}</strong> ${item.sku ? '(' + item.sku + ')' : ''}<br>
-                            <small class="text-muted">Harga: Rp ${parseFloat(item.sell_price).toLocaleString('id-ID')} | Stok: ${item.quantity}</small>
-                        </div>`;
-                    });
-                    resultsDiv.html(html).show();
-                } else {
-                    resultsDiv.html('<div class="p-2 text-muted">Tidak ada hasil</div>').show();
-                }
-            });
-        }, 300);
-    });
-    
-    // Select item from search results
-    $(document).on('click', '.item-search-result', function() {
-        const result = $(this);
-        const id = result.data('id');
-        const name = result.data('name');
-        const price = result.data('price');
-        const row = result.closest('.item-row');
-        
-        row.find('.item-select').val(id);
-        row.find('.unit-price').val(price);
-        row.find('.item-search').val(name);
-        result.closest('.item-search-results').hide();
-        
-        calculateTotal();
-    });
-    
-    // Hide search results when clicking outside
-    $(document).on('click', function(e) {
-        if (!$(e.target).closest('.item-search').length) {
-            $('.item-search-results').hide();
-        }
-    });
-    
-    // Add new item row
-    $('#add-item').click(function() {
-        const newRow = $('.item-row:first').clone();
-        newRow.find('input, select').val('');
-        newRow.find('input[type="number"]').val('1');
-        newRow.find('.item-search-results').hide();
-        newRow.attr('data-form-idx', itemFormCount);
-        
-        // Update form field names and IDs
-        newRow.find('input, select').each(function() {
-            const name = $(this).attr('name');
-            const id = $(this).attr('id');
-            if (name) {
-                $(this).attr('name', name.replace(/-\d+-/, `-${itemFormCount}-`));
-            }
-            if (id) {
-                $(this).attr('id', id.replace(/-\d+-/, `-${itemFormCount}-`));
-            }
+    // 1. FUNGSI INIT SELECT2
+    function initSelect2(element) {
+        $(element).select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: 'Pilih...',
+            allowClear: true
         });
-        
-        newRow.find('.item-search').attr('data-idx', itemFormCount);
-        newRow.find('.item-search-results').attr('id', `search-results-${itemFormCount}`);
-        
-        $('#item-formset').append(newRow);
-        $('#id_items-TOTAL_FORMS').val(itemFormCount + 1);
-        itemFormCount++;
-    });
-    
-    // Add new service row
-    $('#add-service').click(function() {
-        const newRow = $('.service-row:first').clone();
-        newRow.find('input, select').val('');
-        newRow.find('input[type="number"]').val('1');
-        
-        // Update form field names and IDs
-        newRow.find('input, select').each(function() {
-            const name = $(this).attr('name');
-            const id = $(this).attr('id');
-            if (name) {
-                $(this).attr('name', name.replace(/-\d+-/, `-${serviceFormCount}-`));
-            }
-            if (id) {
-                $(this).attr('id', id.replace(/-\d+-/, `-${serviceFormCount}-`));
-            }
-        });
-        
-        $('#service-formset').append(newRow);
-        $('#id_services-TOTAL_FORMS').val(serviceFormCount + 1);
-        serviceFormCount++;
-    });
-    
-    // Remove item row
-    $(document).on('click', '.remove-item', function() {
-        $(this).closest('.item-row').remove();
-        calculateTotal();
-    });
-    
-    // Remove service row
-    $(document).on('click', '.remove-service', function() {
-        $(this).closest('.service-row').remove();
-        calculateTotal();
-    });
-    
-    // Calculate total
-    function calculateTotal() {
-        let itemsTotal = 0;
-        let servicesTotal = 0;
-        
-        $('.item-row').each(function() {
-            const qty = parseFloat($(this).find('input[name*="quantity"]').val()) || 0;
-            const price = parseFloat($(this).find('input[name*="unit_price"]').val()) || 0;
-            const discount = parseFloat($(this).find('input[name*="discount_percentage"]').val()) || 0;
-            
-            const subtotal = qty * price;
-            const discountAmount = subtotal * (discount / 100);
-            itemsTotal += subtotal - discountAmount;
-        });
-        
-        $('.service-row').each(function() {
-            const qty = parseFloat($(this).find('input[name*="quantity"]').val()) || 0;
-            const price = parseFloat($(this).find('input[name*="unit_price"]').val()) || 0;
-            const discount = parseFloat($(this).find('input[name*="discount_percentage"]').val()) || 0;
-            
-            const subtotal = qty * price;
-            const discountAmount = subtotal * (discount / 100);
-            servicesTotal += subtotal - discountAmount;
-        });
-        
-        const otherCharges = parseFloat($('#id_other_charges').val()) || 0;
-        const discountAmount = parseFloat($('#id_discount_amount').val()) || 0;
-        
-        const grandTotal = itemsTotal + servicesTotal + otherCharges - discountAmount;
-        
-        $('#items-subtotal').text('Rp ' + itemsTotal.toLocaleString('id-ID', {minimumFractionDigits: 0}));
-        $('#services-subtotal').text('Rp ' + servicesTotal.toLocaleString('id-ID', {minimumFractionDigits: 0}));
-        $('#other-charges-display').text('Rp ' + otherCharges.toLocaleString('id-ID', {minimumFractionDigits: 0}));
-        $('#discount-display').text('- Rp ' + discountAmount.toLocaleString('id-ID', {minimumFractionDigits: 0}));
-        $('#grand-total').text('Rp ' + grandTotal.toLocaleString('id-ID', {minimumFractionDigits: 0}));
     }
-    
-    // Recalculate on input change
-    $(document).on('input', 'input[name*="quantity"], input[name*="unit_price"], input[name*="discount_percentage"], #id_other_charges, #id_discount_amount', function() {
+
+    // Init awal untuk elemen yg sudah ada
+    $('.select2-enable').select2({ theme: 'bootstrap-5', width: '100%' });
+    $('#item-tbody select').each(function() { initSelect2(this); });
+    $('#service-tbody select').each(function() { initSelect2(this); });
+
+    // 2. FUNGSI TAMBAH BARIS (Generic)
+    function addRow(type) {
+        const prefix = (type === 'item') ? 'items' : 'services';
+        const tbodyId = `#${type}-tbody`;
+        const emptyId = `#${type}-empty-form`;
+        const totalFormsInput = $(`#id_${prefix}-TOTAL_FORMS`);
+        
+        let formIdx = parseInt(totalFormsInput.val());
+        
+        // Ambil HTML dari template kosong & ganti __prefix__ dengan index
+        let newHtml = $(emptyId).html().replace(/__prefix__/g, formIdx);
+        
+        // Append ke tabel
+        $(tbodyId).append(newHtml);
+        
+        // Init Select2 di baris baru
+        initSelect2($(tbodyId).find(`tr:last select`));
+        
+        // Update Total Forms
+        totalFormsInput.val(formIdx + 1);
+    }
+
+    $('#add-item').click(function() { addRow('item'); });
+    $('#add-service').click(function() { addRow('service'); });
+
+    // 3. FUNGSI HAPUS BARIS
+    $(document).on('click', '.remove-row', function() {
+        let row = $(this).closest('tr');
+        let deleteInput = row.find('input[type="checkbox"][name$="-DELETE"]');
+        
+        if (deleteInput.length) {
+            // Jika row dari database, centang delete & sembunyikan
+            deleteInput.prop('checked', true);
+            row.addClass('deleted');
+        } else {
+            // Jika row baru, hapus elemen
+            row.remove();
+        }
         calculateTotal();
     });
+
+    // 4. AUTO FILL HARGA (AJAX)
+    // Menggunakan event delegation agar jalan di row baru
+    $(document).on('change', 'select[name$="-item"]', function() {
+        let itemId = $(this).val();
+        let row = $(this).closest('tr');
+        if(itemId) {
+            $.get(`/transactions/api/item-price/${itemId}/`, function(data) {
+                // Set nilai harga (User MASIH BISA EDIT karena ini input biasa)
+                row.find('input[name$="-unit_price"]').val(data.price);
+                calculateTotal();
+            });
+        }
+    });
+
+    $(document).on('change', 'select[name$="-service"]', function() {
+        let svcId = $(this).val();
+        let row = $(this).closest('tr');
+        if(svcId) {
+            $.get(`/transactions/api/service-price/${svcId}/`, function(data) {
+                row.find('input[name$="-unit_price"]').val(data.price);
+                calculateTotal();
+            });
+        }
+    });
+
+    // 5. HITUNG TOTAL LIVE
+    function calculateTotal() {
+        let grandTotal = 0;
+
+        // Loop Item
+        $('#item-tbody tr:not(.deleted)').each(function() {
+            let qty = parseFloat($(this).find('input[name$="-quantity"]').val()) || 0;
+            let price = parseFloat($(this).find('input[name$="-unit_price"]').val()) || 0;
+            let disc = parseFloat($(this).find('input[name$="-discount_percentage"]').val()) || 0;
+            grandTotal += (qty * price) * ((100 - disc) / 100);
+        });
+
+        // Loop Service
+        $('#service-tbody tr:not(.deleted)').each(function() {
+            let qty = parseFloat($(this).find('input[name$="-quantity"]').val()) || 0;
+            let price = parseFloat($(this).find('input[name$="-unit_price"]').val()) || 0;
+            let disc = parseFloat($(this).find('input[name$="-discount_percentage"]').val()) || 0;
+            grandTotal += (qty * price) * ((100 - disc) / 100);
+        });
+
+        // Biaya Lain & Diskon Akhir
+        let other = parseFloat($('input[name="other_charges"]').val()) || 0;
+        let finalDisc = parseFloat($('input[name="discount_amount"]').val()) || 0;
+
+        grandTotal = grandTotal + other - finalDisc;
+
+        // Format Rupiah
+        $('#grand-total').text('Rp ' + grandTotal.toLocaleString('id-ID'));
+    }
+
+    // Trigger hitung saat ada input berubah
+    $(document).on('input change', 'input, select', calculateTotal);
     
-    // Initial calculation
+    // Hitung saat load awal
     calculateTotal();
 });
 </script>

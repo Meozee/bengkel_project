@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Laporan Kinerja Mekanik{% endblock %}
 
@@ -7,13 +8,12 @@
 
 <div class="card shadow-sm mb-4">
     <div class="card-body">
-        <form method="post">
-            {% csrf_token %}
+        <form method="get">
             <div class="row g-3 align-items-end">
                 <div class="col-md-4">
                     <label for="mechanic" class="form-label">Pilih Mekanik</label>
                     <select name="mechanic" id="mechanic" class="form-select" required>
-                        <option value="">---</option>
+                        <option value="">--- Pilih Mekanik ---</option>
                         {% for m in mechanics %}
                         <option value="{{ m.pk }}" {% if selected_mechanic_id == m.pk %}selected{% endif %}>{{ m.name }}</option>
                         {% endfor %}
@@ -28,7 +28,7 @@
                     <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">Generate</button>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Generate</button>
                 </div>
             </div>
         </form>
@@ -37,32 +37,53 @@
 
 {% if report_data %}
 <div class="card shadow-sm">
-    <div class="card-header">
-        <h5>Hasil Kinerja: {{ report_data.mechanic.name }}</h5>
-        <small class="text-muted">Periode: {{ report_data.start_date|date:"d M Y" }} - {{ report_data.end_date|date:"d M Y" }}</small>
+    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i> {{ report_data.mechanic.name }}</h5>
+            <small>Periode: {{ report_data.start_date|date:"d M Y" }} - {{ report_data.end_date|date:"d M Y" }}</small>
+        </div>
+        <a href="{% url 'reports:export_mechanic' %}?mechanic={{ selected_mechanic_id }}&start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-light btn-sm text-info fw-bold">
+            <i class="bi bi-file-earmark-excel"></i> Export Excel
+        </a>
     </div>
     <div class="card-body">
-        <dl class="row">
-            <dt class="col-sm-4">Total Pekerjaan Selesai</dt>
-            <dd class="col-sm-8">{{ report_data.total_jobs }}</dd>
-
-            <dt class="col-sm-4">Total Pendapatan Dihasilkan</dt>
-            <dd class="col-sm-8">Rp {{ report_data.total_revenue|floatformat:2 }}</dd>
-            
-            <dt class="col-sm-4">Jasa Paling Sering</dt>
-            <dd class="col-sm-8">{{ report_data.top_service }} ({{ report_data.top_service_count }} kali)</dd>
-        </dl>
+        <div class="row text-center">
+            <div class="col-md-3 border-end">
+                <h6 class="text-muted">Total Pekerjaan</h6>
+                <h2 class="fw-bold text-primary">{{ report_data.total_jobs }}</h2>
+                <small>Unit Kendaraan</small>
+            </div>
+            <div class="col-md-3 border-end">
+                <h6 class="text-muted">Pendapatan Dihasilkan</h6>
+                <h2 class="fw-bold text-success">Rp {{ report_data.total_revenue|intcomma }}</h2>
+                <small>Omzet Service</small>
+            </div>
+            <div class="col-md-3 border-end">
+                <h6 class="text-muted">Rata-rata Durasi</h6>
+                <h2 class="fw-bold text-warning">{{ report_data.avg_duration_str }}</h2>
+                <small>Per Kendaraan</small>
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-muted">Spesialisasi (Top Service)</h6>
+                <h4 class="fw-bold text-dark mt-2">{{ report_data.top_service }}</h4>
+                <small class="badge bg-secondary">{{ report_data.top_service_count }} kali dikerjakan</small>
+            </div>
+        </div>
     </div>
 </div>
-{% elif request.method == 'POST' %}
-<div class="alert alert-warning">Tidak ditemukan data transaksi untuk mekanik dan periode yang dipilih.</div>
+{% elif request.GET.mechanic %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-circle me-2"></i> Tidak ditemukan data transaksi (COMPLETED) untuk mekanik ini pada periode yang dipilih.
+</div>
 {% else %}
-<div class="alert alert-info">Pilih mekanik dan rentang tanggal untuk melihat laporan kinerjanya.</div>
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i> Silakan pilih mekanik dan rentang tanggal di atas.
+</div>
 {% endif %}
 
 <div class="mt-4">
     <a href="{% url 'reports:report_index' %}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Kembali ke Pusat Laporan
+        <i class="bi bi-arrow-left"></i> Kembali
     </a>
 </div>
 {% endblock %}

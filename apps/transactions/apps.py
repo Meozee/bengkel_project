@@ -7,5 +7,4 @@ class TransactionsConfig(AppConfig):
     name = 'apps.transactions'
 
     def ready(self):
-        # Impor signals secara implisit saat aplikasi siap
         import apps.transactions.signals

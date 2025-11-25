@@ -1,120 +1,141 @@
 {% extends "base.html" %}
+{% load humanize %}
 
 {% block title %}Daftar Purchase Order{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-cart4"></i> Purchase Orders (PO)</h1>
-    <a href="{% url 'purchases:purchase_create' %}" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> Buat PO Baru
-    </a>
-</div>
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+        <h1><i class="bi bi-cart4 me-2"></i> Purchase Orders</h1>
+        <a href="{% url 'purchases:purchase_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Buat PO Baru
+        </a>
+    </div>
 
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="get" action="{% url 'purchases:purchase_list' %}">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label for="q" class="form-label">Cari ID PO / Vendor</label>
-                    <input type="text" name="q" id="q" class="form-control" value="{{ current_query }}">
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light">
+            <i class="bi bi-funnel"></i> Filter Pencarian
+        </div>
+        <div class="card-body">
+            <form method="get" action="{% url 'purchases:purchase_list' %}">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Cari (ID/Vendor/Pembeli)</label>
+                        <input type="text" name="q" class="form-control" value="{{ current_query }}" placeholder="Contoh: PO-123, Toko A, Budi...">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted">Vendor</label>
+                        <select name="vendor" class="form-select">
+                            <option value="">Semua Vendor</option>
+                            {% for v in vendors %}
+                            <option value="{{ v.pk }}" {% if current_vendor == v.pk %}selected{% endif %}>
+                                {{ v.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">Semua Status</option>
+                            {% for value, text in statuses %}
+                            <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                                {{ text }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted">Dari Tanggal</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted">Sampai Tanggal</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                    </div>
+
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-info text-white w-100" title="Cari"><i class="bi bi-search"></i></button>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <label for="vendor" class="form-label">Vendor</label>
-                    <select name="vendor" id="vendor" class="form-select">
-                        <option value="">Semua Vendor</option>
-                        {% for v in vendors %}
-                        <option value="{{ v.pk }}" {% if current_vendor == v.pk %}selected{% endif %}>
-                            {{ v.name }}
-                        </option>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>PO ID</th>
+                            <th>Tanggal Order</th>
+                            <th>Vendor</th>
+                            <th>Pembeli (PIC)</th> <th>Status</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for po in purchases %}
+                        <tr>
+                            <td><strong>PO-{{ po.id }}</strong></td>
+                            <td>{{ po.order_date|date:"d M Y, H:i" }}</td>
+                            <td>{{ po.vendor.name }}</td>
+                            
+                            <td>
+                                <i class="bi bi-person-circle text-muted me-1"></i>
+                                {{ po.purchaser_name }}
+                            </td>
+
+                            <td>
+                                {% if po.status == 'COMPLETED' %}
+                                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>{{ po.get_status_display }}</span>
+                                {% elif po.status == 'PENDING' %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>{{ po.get_status_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ po.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold">Rp {{ po.total_amount|intcomma }}</td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'purchases:purchase_update' po.pk %}" class="btn btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                                    <a href="{% url 'purchases:purchase_delete' po.pk %}" class="btn btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="bi bi-inbox display-4 text-muted"></i>
+                                <p class="text-muted mt-2">Tidak ada data Purchase Order.</p>
+                            </td>
+                        </tr>
                         {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="status" class="form-label">Status</label>
-                    <select name="status" id="status" class="form-select">
-                        <option value="">Semua Status</option>
-                        {% for value, text in statuses %}
-                        <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
-                            {{ text }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-info w-100">Filter</button>
-                    <a href="{% url 'purchases:purchase_list' %}" class="btn btn-secondary w-100 mt-1">Reset</a>
-                </div>
+                    </tbody>
+                </table>
             </div>
-        </form>
+            
+            {% if is_paginated %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ current_query }}&status={{ current_status }}&vendor={{ current_vendor }}&start_date={{ start_date }}&end_date={{ end_date }}">&laquo;</a></li>
+                    {% endif %}
+                    
+                    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ current_query }}&status={{ current_status }}&vendor={{ current_vendor }}&start_date={{ start_date }}&end_date={{ end_date }}">&raquo;</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
     </div>
 </div>
-
-<div class="table-responsive">
-    <table class="table table-hover align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>PO ID</th>
-                <th>Vendor</th>
-                <th>Tanggal Order</th>
-                <th>Status</th>
-                <th class="text-end">Total</th>
-                <th class="text-end">Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for po in purchases %}
-            <tr>
-                <td><strong>PO-{{ po.id }}</strong></td>
-                <td>{{ po.vendor.name }}</td>
-                <td>{{ po.order_date|date:"d M Y, H:i" }}</td>
-                <td>
-                    {% if po.status == 'COMPLETED' %}
-                        <span class="badge bg-success">{{ po.get_status_display }}</span>
-                    {% elif po.status == 'PENDING' %}
-                        <span class="badge bg-warning text-dark">{{ po.get_status_display }}</span>
-                    {% else %}
-                        <span class="badge bg-secondary">{{ po.get_status_display }}</span>
-                    {% endif %}
-                </td>
-                <td class="text-end fw-bold">Rp {{ po.total_amount|floatformat:2 }}</td>
-                <td class="text-end">
-                    <a href="{% url 'purchases:purchase_update' po.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
-                    <a href="{% url 'purchases:purchase_delete' po.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" class="text-center py-4">
-                    <p class="text-muted">Tidak ada Purchase Order ditemukan.</p>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-{% if is_paginated %}
-<nav aria-label="Page navigation">
-    <ul class="pagination justify-content-center">
-        {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
-        {% else %}
-            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
-        {% endif %}
-        
-        {% for i in paginator.page_range %}
-            <li class="page-item {% if page_obj.number == i %}active{% endif %}">
-                <a class="page-link" href="?page={{ i }}">{{ i }}</a>
-            </li>
-        {% endfor %}
-        
-        {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
-        {% else %}
-            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
-
 {% endblock %}

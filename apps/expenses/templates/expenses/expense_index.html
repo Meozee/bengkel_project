@@ -4,82 +4,155 @@
 {% block content %}
 <div class="container-fluid px-4">
     
-    <h1 class="mt-4">{{ page_title }}</h1>
-    
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+        <h1>{{ page_title }}</h1>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <i class="bi bi-funnel"></i> Filter Pengeluaran
+        </div>
+        <div class="card-body">
+            <form method="get">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Cari (Deskripsi/User)</label>
+                        <input type="text" name="q" class="form-control" value="{{ current_query }}" placeholder="Contoh: Listrik, Budi...">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted">Kategori</label>
+                        <select name="category" class="form-select">
+                            <option value="">Semua Kategori</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.pk }}" {% if current_category == cat.pk %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted">Dari Tanggal</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ current_start }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted">Sampai Tanggal</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ current_end }}">
+                    </div>
+
+                    <div class="col-md-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-info text-white w-100"><i class="bi bi-search"></i> Cari</button>
+                        <a href="{% url 'expenses:expense_index' %}" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle"></i> Reset</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <ul class="nav nav-tabs" id="expenseTab" role="tablist">
-        </ul>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expenses-tab-pane" type="button" role="tab">
+                <i class="bi bi-cash-stack me-1"></i> Daftar Pengeluaran
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="categories-tab" data-bs-toggle="tab" data-bs-target="#categories-tab-pane" type="button" role="tab">
+                <i class="bi bi-tags-fill me-1"></i> Kategori
+            </button>
+        </li>
+    </ul>
 
     <div class="tab-content" id="expenseTabContent">
         
         <div class="tab-pane fade show active" id="expenses-tab-pane" role="tabpanel" aria-labelledby="expenses-tab" tabindex="0">
-            <div class="card mt-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div><i class="bi bi-table me-1"></i> Data Pengeluaran</div>
-                    <a href="{% url 'expenses:expense_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i> Tambah Pengeluaran</a>
+            <div class="card mt-3 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <div class="fw-bold text-primary">Data Pengeluaran Operasional</div>
+                    <a href="{% url 'expenses:expense_create' %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i> Tambah Pengeluaran
+                    </a>
                 </div>
                 <div class="card-body">
-                    <table id="datatablesSimple1" class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Tanggal</th>
-                                <th>Kategori</th>
-                                <th>Jumlah</th>
-                                <th>Deskripsi</th>
-                                <th>Dicatat Oleh</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for expense in expenses %}
-                            <tr>
-                                <td>{{ expense.date|date:"d M Y" }}</td>
-                                <td>{{ expense.category.name }}</td>
-                                <td>Rp {{ expense.amount|intcomma }}</td>
-                                <td>{{ expense.description|truncatewords:10 }}</td>
-                                <td>{{ expense.user.username|default:"-" }}</td>
-                                <td>
-                                    <a href="{% url 'expenses:expense_update' expense.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-fill"></i></a>
-                                    <a href="{% url 'expenses:expense_delete' expense.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="6" class="text-center">Belum ada data.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Kategori</th>
+                                    <th>Jumlah</th>
+                                    <th>Deskripsi</th>
+                                    <th>Dicatat Oleh</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for expense in expenses %}
+                                <tr>
+                                    <td>{{ expense.date|date:"d M Y" }}</td>
+                                    <td><span class="badge bg-secondary">{{ expense.category.name }}</span></td>
+                                    <td class="fw-bold text-danger">Rp {{ expense.amount|intcomma }}</td>
+                                    <td>{{ expense.description|truncatewords:8 }}</td>
+                                    <td><small class="text-muted">{{ expense.user.username|default:"-" }}</small></td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'expenses:expense_update' expense.pk %}" class="btn btn-outline-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{% url 'expenses:expense_delete' expense.pk %}" class="btn btn-outline-danger" title="Hapus">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="6" class="text-center py-4 text-muted">Belum ada data pengeluaran yang sesuai filter.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="tab-pane fade" id="categories-tab-pane" role="tabpanel" aria-labelledby="categories-tab" tabindex="0">
-            <div class="card mt-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div><i class="bi bi-table me-1"></i> Data Kategori</div>
-                    <a href="{% url 'expenses:category_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i> Tambah Kategori</a>
+            <div class="card mt-3 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <div class="fw-bold text-primary">Master Kategori</div>
+                    <a href="{% url 'expenses:category_create' %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i> Tambah Kategori
+                    </a>
                 </div>
                 <div class="card-body">
-                    <table id="datatablesSimple2" class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Nama Kategori</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for category in categories %}
-                            <tr>
-                                <td>{{ category.name }}</td>
-                                <td>
-                                    <a href="{% url 'expenses:category_update' category.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-fill"></i></a>
-                                    <a href="{% url 'expenses:category_delete' category.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="2" class="text-center">Belum ada data.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle w-100">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nama Kategori</th>
+                                    <th style="width: 150px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in categories %}
+                                <tr>
+                                    <td>{{ category.name }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'expenses:category_update' category.pk %}" class="btn btn-outline-primary">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{% url 'expenses:category_delete' category.pk %}" class="btn btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="2" class="text-center py-4 text-muted">Belum ada kategori.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

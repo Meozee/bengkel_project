@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Struk #{{ transaction.invoice_number }}</title>
+    <style>
+        @media print {
+            @page { margin: 0; size: 80mm auto; } # Ganti 58mm jika printer kecil
+            body { margin: 10px; }
+        }
+        body {
+            font-family: 'Courier New', Courier, monospace; /* Font struk */
+            font-size: 12px;
+            max-width: 80mm;
+            margin: 0 auto;
+            background: #fff;
+        }
+        .header, .footer { text-align: center; margin-bottom: 10px; }
+        .bold { font-weight: bold; }
+        .divider { border-top: 1px dashed #000; margin: 5px 0; }
+        .flex { display: flex; justify-content: space-between; }
+        .text-right { text-align: right; }
+        .btn-print { 
+            display: block; width: 100%; padding: 10px; 
+            background: #0d6efd; color: white; text-align: center; 
+            text-decoration: none; margin-bottom: 20px; font-family: sans-serif;
+        }
+        @media print { .btn-print { display: none; } }
+    </style>
+</head>
+<body>
+
+    <a href="#" onclick="window.print()" class="btn-print">KLIK UNTUK PRINT</a>
+
+    <div class="header">
+        <div class="bold" style="font-size: 14px;">{{ shop_name }}</div>
+        <div>{{ shop_address }}</div>
+        <div>{{ shop_phone }}</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="flex">
+        <span>No: {{ transaction.invoice_number }}</span>
+        <span>{{ transaction.created_at|date:"d/m/y H:i" }}</span>
+    </div>
+    <div class="flex">
+        <span>Plat: {{ transaction.vehicle.license_plate|default:"-" }}</span>
+        <span>Mekanik: {{ transaction.mechanic.name|default:"-" }}</span>
+    </div>
+    <div>Plg: {{ transaction.customer.name|default:"Umum" }}</div>
+
+    <div class="divider"></div>
+
+    {% for item in items %}
+    <div style="margin-bottom: 2px;">
+        <div>{{ item.item.name }}</div>
+        <div class="flex">
+            <span>{{ item.quantity }} x {{ item.unit_price|floatformat:0 }}</span>
+            <span>{{ item.subtotal|floatformat:0 }}</span>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% for svc in services %}
+    <div style="margin-bottom: 2px;">
+        <div>{{ svc.service.name }}</div>
+        <div class="flex">
+            <span>{{ svc.quantity }} x {{ svc.unit_price|floatformat:0 }}</span>
+            <span>{{ svc.subtotal|floatformat:0 }}</span>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="divider"></div>
+
+    {% if transaction.other_charges > 0 %}
+    <div class="flex">
+        <span>Biaya Lain</span>
+        <span>{{ transaction.other_charges|floatformat:0 }}</span>
+    </div>
+    {% endif %}
+
+    {% if transaction.discount_amount > 0 %}
+    <div class="flex">
+        <span>Diskon</span>
+        <span>-{{ transaction.discount_amount|floatformat:0 }}</span>
+    </div>
+    {% endif %}
+
+    <div class="flex bold" style="font-size: 14px; margin-top: 5px;">
+        <span>TOTAL</span>
+        <span>Rp {{ transaction.total_amount|floatformat:0 }}</span>
+    </div>
+
+    <div class="divider"></div>
+    <div class="footer">
+        <div>Terima Kasih</div>
+        <div>jangan lupa services rutinan ya :)</div>
+    </div>
+
+</body>
+</html>

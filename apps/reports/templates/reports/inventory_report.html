@@ -1,51 +1,65 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Laporan Stok Inventaris{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1><i class="bi bi-box-seam"></i> Laporan Stok Rendah</h1>
+        <h1><i class="bi bi-box-seam text-warning"></i> Laporan Stok Rendah</h1>
         <p class="text-muted">Generated pada: {{ generated_date|date:"d M Y, H:i" }}</p>
     </div>
     <div>
         <a href="{% url 'reports:export_inventory' %}" class="btn btn-outline-danger">
             <i class="bi bi-file-earmark-pdf"></i> Export ke PDF
         </a>
-        <button class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Cetak</button>
+        <button class="btn btn-outline-secondary" onclick="window.print()">
+            <i class="bi bi-printer"></i> Cetak
+        </button>
     </div>
 </div>
 
 <div class="card shadow-sm">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Nama Item</th>
                         <th class="text-center">Stok Saat Ini</th>
-                        <th class="text-center">Batas Order Ulang</th>
+                        <th class="text-center">Batas Aman</th>
+                        <th class="text-end">Estimasi Nilai Aset</th>
                         <th class="text-center">Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in items %}
                     <tr>
-                        <td><strong>{{ item.name }}</strong><br><small class="text-muted">SKU: {{ item.sku|default:'-' }}</small></td>
-                        <td class="text-center fw-bold">{{ item.quantity }}</td>
-                        <td class="text-center">{{ item.reorder_threshold }}</td>
+                        <td>
+                            <strong>{{ item.name }}</strong><br>
+                            <small class="text-muted">SKU: {{ item.sku|default:'-' }}</small>
+                        </td>
+                        <td class="text-center fw-bold fs-5">{{ item.quantity }}</td>
+                        <td class="text-center text-muted">{{ item.reorder_threshold }}</td>
+                        
+                        <td class="text-end">
+                            Rp {{ item.asset_value|intcomma }}<br>
+                            <small class="text-muted">@ Rp {{ item.buy_price|intcomma }}</small>
+                        </td>
+
                         <td class="text-center">
                             {% if item.quantity == 0 %}
-                                <span class="badge bg-danger">Habis</span>
+                                <span class="badge bg-danger rounded-pill px-3">Habis!</span>
                             {% else %}
-                                <span class="badge bg-warning text-dark">Stok Rendah</span>
+                                <span class="badge bg-warning text-dark rounded-pill px-3">Stok Rendah</span>
                             {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="text-center text-muted py-5">
-                            <h5><i class="bi bi-check-circle-fill text-success"></i> Semua stok aman!</h5>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <h5><i class="bi bi-check-circle-fill text-success display-4"></i></h5>
+                            <h5 class="mt-3">Semua stok aman!</h5>
                             <p>Tidak ada item yang berada di bawah ambang batas order ulang.</p>
                         </td>
                     </tr>
@@ -58,7 +72,7 @@
 
 <div class="mt-4">
     <a href="{% url 'reports:report_index' %}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Kembali ke Pusat Laporan
+        <i class="bi bi-arrow-left"></i> Kembali
     </a>
 </div>
 {% endblock %}

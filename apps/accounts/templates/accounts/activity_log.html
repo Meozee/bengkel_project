@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Log Aktivitas{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+        <h1><i class="bi bi-journal-text me-2"></i> Log Aktivitas Sistem</h1>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <i class="bi bi-funnel me-1"></i> Filter & Pencarian
+        </div>
+        <div class="card-body">
+            <form method="get">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label text-muted small">Cari (Detail/Aksi)</label>
+                        <input type="text" name="q" class="form-control" value="{{ current_search }}" placeholder="Contoh: Delete, Miko, Invoice...">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-muted small">User</label>
+                        <select name="user" class="form-select">
+                            <option value="">Semua User</option>
+                            {% for u in users %}
+                            <option value="{{ u.id }}" {% if current_user == u.id %}selected{% endif %}>
+                                {{ u.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-muted small">Dari Tanggal</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-muted small">Sampai Tanggal</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Cari</button>
+                        <a href="{% url 'accounts:activity_log' %}" class="btn btn-outline-secondary" title="Reset Filter"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="alert alert-info py-2 small">
+        <i class="bi bi-info-circle-fill me-2"></i> 
+        Menampilkan maksimal <strong>100 aktivitas terbaru</strong> per kategori. Gunakan filter tanggal untuk melihat riwayat yang lebih lama.
+    </div>
+
+    <ul class="nav nav-tabs" id="logTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="auth-tab" data-bs-toggle="tab" data-bs-target="#auth-tab-pane" type="button">
+                <i class="bi bi-shield-lock me-1"></i> Login & Logout
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="trans-tab" data-bs-toggle="tab" data-bs-target="#trans-tab-pane" type="button">
+                <i class="bi bi-receipt me-1"></i> Transaksi
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="inv-tab" data-bs-toggle="tab" data-bs-target="#inv-tab-pane" type="button">
+                <i class="bi bi-box-seam me-1"></i> Inventory
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="fin-tab" data-bs-toggle="tab" data-bs-target="#fin-tab-pane" type="button">
+                <i class="bi bi-cash-coin me-1"></i> Keuangan
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="master-tab" data-bs-toggle="tab" data-bs-target="#master-tab-pane" type="button">
+                <i class="bi bi-database me-1"></i> Data Master
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="report-tab" data-bs-toggle="tab" data-bs-target="#report-tab-pane" type="button">
+                <i class="bi bi-file-earmark-bar-graph me-1"></i> Laporan
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content border border-top-0 p-0 bg-white shadow-sm" id="logTabsContent">
+        
+        <div class="tab-pane fade show active" id="auth-tab-pane" role="tabpanel" tabindex="0">
+            {% include "accounts/snippets/log_table.html" with logs=logs_auth show_detail=False %}
+        </div>
+
+        <div class="tab-pane fade" id="trans-tab-pane" role="tabpanel" tabindex="0">
+            {% include "accounts/snippets/log_table.html" with logs=logs_transaction show_detail=True %}
+        </div>
+
+        <div class="tab-pane fade" id="inv-tab-pane" role="tabpanel" tabindex="0">
+            {% include "accounts/snippets/log_table.html" with logs=logs_inventory show_detail=True %}
+        </div>
+
+        <div class="tab-pane fade" id="fin-tab-pane" role="tabpanel" tabindex="0">
+            {% include "accounts/snippets/log_table.html" with logs=logs_finance show_detail=True %}
+        </div>
+
+        <div class="tab-pane fade" id="master-tab-pane" role="tabpanel" tabindex="0">
+            {% include "accounts/snippets/log_table.html" with logs=logs_master show_detail=True %}
+        </div>
+
+        <div class="tab-pane fade" id="report-tab-pane" role="tabpanel" tabindex="0">
+            {% include "accounts/snippets/log_table.html" with logs=logs_reports show_detail=True %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

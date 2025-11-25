@@ -3,14 +3,13 @@
 from decimal import Decimal
 from django.db import models
 from django.utils import timezone
-from apps.master_data.models import Vendor
+from apps.master_data.models import Vendor, Mechanic # Import Mechanic
 from apps.inventory.models import InventoryItem
-
 
 class PurchaseOrder(models.Model):
     """
     Model untuk mencatat pembelian barang dari vendor.
-    Stok akan bertambah hanya jika status menjadi COMPLETED (lihat sinyal).
+    Stok akan bertambah hanya jika status menjadi COMPLETED.
     """
     class StatusChoices(models.TextChoices):
         PENDING = 'PENDING', 'Pending'
@@ -21,6 +20,22 @@ class PurchaseOrder(models.Model):
     order_date = models.DateTimeField(default=timezone.now)
     expected_delivery_date = models.DateField(null=True, blank=True)
 
+    # --- TRACKING PEMBELI (UPDATE BARU) ---
+    # Opsi 1: Pilih dari data Mekanik
+    purchaser_mechanic = models.ForeignKey(
+        Mechanic, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        help_text="Pilih jika yang belanja adalah Montir"
+    )
+    # Opsi 2: Isi manual teks (misal: 'Pak Budi' atau 'Admin Gudang')
+    purchaser_custom = models.CharField(
+        max_length=100, 
+        blank=True, 
+        help_text="Isi manual jika yang belanja bukan Montir terdaftar"
+    )
+
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.PENDING)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     notes = models.TextField(blank=True)
@@ -29,15 +44,19 @@ class PurchaseOrder(models.Model):
         ordering = ['-order_date']
 
     def __str__(self):
-        return f"PO-{self.id} ke {self.vendor.name if self.vendor else 'N/A'} ({self.status})"
+        return f"PO-{self.id} ke {self.vendor.name if self.vendor else 'N/A'}"
 
-    # Tidak perlu override save(); logika stok di-handle oleh sinyal.
+    @property
+    def purchaser_name(self):
+        """Helper untuk menampilkan nama pembeli di template"""
+        if self.purchaser_mechanic:
+            return self.purchaser_mechanic.name
+        return self.purchaser_custom or "-"
 
 
 class PurchaseOrderItem(models.Model):
     """
     Item barang yang dibeli dari vendor.
-    Harga & jumlah stok dicatat pada saat PO dibuat.
     """
     purchase_order = models.ForeignKey(PurchaseOrder, related_name='items', on_delete=models.CASCADE)
     item = models.ForeignKey(InventoryItem, on_delete=models.PROTECT)

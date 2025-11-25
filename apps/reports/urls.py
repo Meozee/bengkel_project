@@ -1,3 +1,5 @@
+# apps/reports/urls.py
+
 from django.urls import path
 from . import views
 
@@ -15,4 +17,5 @@ urlpatterns = [
     path('export/financial/', views.export_financial_report, name='export_financial'),
     path('export/inventory/', views.export_inventory_report, name='export_inventory'),
     path('export/customer/', views.export_customer_report, name='export_customer'),
+    path('export/mechanic/', views.export_mechanic_report, name='export_mechanic'), # Baru
 ]

@@ -150,12 +150,6 @@ AUTH_USER_MODEL = 'accounts.CustomUser'
 # ==================================
 
 # URL tempat halaman login berada
-LOGIN_URL = 'login' 
-
-# Halaman yang dituju SETELAH berhasil login
-# (Berdasarkan base.html kamu, 'dashboard:index' adalah pilihan yang logis)
+LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'dashboard:index'
-
-# Halaman yang dituju SETELAH berhasil logout
-# (Kita arahkan kembali ke halaman login)
-LOGOUT_REDIRECT_URL = 'login'
+LOGOUT_REDIRECT_URL = 'accounts:login' # Ini juga diganti
