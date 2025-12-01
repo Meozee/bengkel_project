@@ -28,13 +28,13 @@
                     <div class="col-md-3">
                         <label class="form-label small text-muted">Pelanggan/Mekanik</label>
                         <input type="text" name="customer_name" class="form-control mb-2" 
-                               value="{{ filter_customer }}" placeholder="Cari Pelanggan...">
+                               value="{{ filter_customer }}" placeholder="Nama Pelanggan...">
                         <input type="text" name="mechanic_name" class="form-control" 
-                               value="{{ filter_mechanic }}" placeholder="Cari Mekanik...">
+                               value="{{ filter_mechanic }}" placeholder="Nama Mekanik...">
                     </div>
                     
                     <div class="col-md-3">
-                        <label class="form-label small text-muted">Kendaraan/Status</label>
+                        <label class="form-label small text-muted">Kendaraan & Status</label>
                         <input type="text" name="license_plate" class="form-control mb-2" 
                                value="{{ filter_plate }}" placeholder="Plat Nomor...">
                         <select name="status" class="form-select">
@@ -46,24 +46,20 @@
                     </div>
 
                     <div class="col-md-3">
-                        <label class="form-label small text-muted">Rentang Tanggal</label>
+                        <label class="form-label small text-muted">Tanggal Transaksi</label>
                         <div class="input-group mb-2">
-                            <span class="input-group-text text-muted small">Mulai</span>
+                            <span class="input-group-text small">Mulai</span>
                             <input type="date" name="start_date" class="form-control" value="{{ filter_start }}">
                         </div>
                         <div class="input-group">
-                            <span class="input-group-text text-muted small">Sampai</span>
+                            <span class="input-group-text small">Sampai</span>
                             <input type="date" name="end_date" class="form-control" value="{{ filter_end }}">
                         </div>
                     </div>
                     
-                    <div class="col-md-3 d-flex flex-column justify-content-end">
-                        <button type="submit" class="btn btn-primary w-100 mb-2">
-                            <i class="bi bi-search me-1"></i>Cari
-                        </button>
-                        <a href="{% url 'transactions:transaction_list' %}" class="btn btn-outline-danger w-100">
-                            <i class="bi bi-x-circle me-1"></i>Reset
-                        </a>
+                    <div class="col-md-3 d-grid gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Cari Data</button>
+                        <a href="{% url 'transactions:transaction_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-counterclockwise"></i> Reset</a>
                     </div>
                 </div>
             </form>
@@ -78,11 +74,11 @@
                 <thead class="table-light">
                     <tr>
                         <th>Invoice</th>
-                        <th>Waktu Masuk</th>
+                        <th>Waktu</th>
                         <th>Pelanggan</th>
-                        <th>Detail Kendaraan & Pengerjaan</th> 
+                        <th style="width: 25%">Detail Pengerjaan</th>
                         <th>Mekanik</th>
-                        <th>Total</th>
+                        <th class="text-end">Total</th>
                         <th>Status</th>
                         <th>Aksi</th>
                     </tr>
@@ -95,7 +91,6 @@
                                 {{ transaction.invoice_number }}
                             </a>
                         </td>
-                        
                         <td>{{ transaction.created_at|date:"d M Y H:i" }}</td>
                         <td>{{ transaction.customer.name|default:"-" }}</td>
                         
@@ -109,56 +104,34 @@
                             
                             <div class="mt-1 small text-primary">
                                 {% for item in transaction.items.all|slice:":2" %}
-                                    <i class="bi bi-dot"></i> {{ item.item.name }} ({{ item.quantity }})<br>
+                                    <div><i class="bi bi-box"></i> {{ item.item.name }} ({{ item.quantity }})</div>
                                 {% endfor %}
                                 {% for svc in transaction.services.all|slice:":2" %}
-                                    <i class="bi bi-tools"></i> {{ svc.service.name }}<br>
+                                    <div><i class="bi bi-wrench"></i> {{ svc.service.name }}</div>
                                 {% endfor %}
-                                
                                 {% if transaction.items.count > 2 or transaction.services.count > 2 %}
-                                    <span class="fst-italic text-muted">...dan lainnya</span>
+                                    <small class="text-muted fst-italic">...dan lainnya</small>
                                 {% endif %}
                             </div>
                         </td>
 
                         <td>{{ transaction.mechanic.name|default:"-" }}</td>
-                        
-                        <td class="text-end">
-                            <strong>Rp {{ transaction.total_amount|intcomma }}</strong>
-                        </td>
+                        <td class="text-end fw-bold">Rp {{ transaction.total_amount|intcomma }}</td>
                         
                         <td>
                             <div class="btn-group">
-                                <button type="button" class="btn btn-sm 
+                                <button type="button" class="btn btn-sm dropdown-toggle 
                                     {% if transaction.status == 'COMPLETED' %}btn-success
                                     {% elif transaction.status == 'PENDING' %}btn-warning
-                                    {% else %}btn-secondary{% endif %} dropdown-toggle" 
-                                    data-bs-toggle="dropdown" 
-                                    aria-expanded="false"
-                                    data-bs-boundary="viewport"> 
-                                    
+                                    {% else %}btn-secondary{% endif %}" 
+                                    data-bs-toggle="dropdown" aria-expanded="false">
                                     {{ transaction.get_status_display }}
                                 </button>
-                                
                                 <ul class="dropdown-menu shadow">
-                                    <li>
-                                        <a class="dropdown-item" href="{% url 'transactions:update_status' transaction.pk 'COMPLETED' %}"
-                                           onclick="return confirm('Apakah pekerjaan selesai? Stok akan dikurangi otomatis.')">
-                                            <i class="bi bi-check-circle-fill text-success me-2"></i>Selesai (Complete)
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="{% url 'transactions:update_status' transaction.pk 'PENDING' %}">
-                                            <i class="bi bi-hourglass-split text-warning me-2"></i>Kembali Pending
-                                        </a>
-                                    </li>
+                                    <li><a class="dropdown-item" href="{% url 'transactions:update_status' transaction.pk 'COMPLETED' %}" onclick="return confirm('Selesaikan transaksi? Stok akan berkurang.')"><i class="bi bi-check-circle text-success me-2"></i>Selesai</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'transactions:update_status' transaction.pk 'PENDING' %}"><i class="bi bi-hourglass-split text-warning me-2"></i>Pending</a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <a class="dropdown-item text-danger" href="{% url 'transactions:update_status' transaction.pk 'CANCELLED' %}"
-                                           onclick="return confirm('Yakin batalkan? Transaksi tidak bisa diedit lagi setelah ini.')">
-                                            <i class="bi bi-x-circle-fill me-2"></i>Batalkan Transaksi
-                                        </a>
-                                    </li>
+                                    <li><a class="dropdown-item text-danger" href="{% url 'transactions:update_status' transaction.pk 'CANCELLED' %}" onclick="return confirm('Yakin batalkan?')"><i class="bi bi-x-circle me-2"></i>Batal</a></li>
                                 </ul>
                             </div>
                         </td>
@@ -166,39 +139,29 @@
                         <td>
                             <div class="btn-group btn-group-sm">
                                 {% if transaction.status == 'COMPLETED' %}
-                                <a href="{% url 'transactions:transaction_print_direct' transaction.pk %}" class="btn btn-dark" title="Print USB">
-                                    <i class="bi bi-printer-fill"></i>
-                                </a>
-                                <a href="#" onclick="window.open('{% url 'transactions:transaction_print' transaction.pk %}', '_blank', 'width=400,height=600')" class="btn btn-outline-secondary" title="Preview Struk">
-                                    <i class="bi bi-file-earmark-pdf"></i>
-                                </a>
-                                {% endif %}
-
-                                {% if transaction.status != 'CANCELLED' %}
-                                <a href="{% url 'transactions:transaction_edit' transaction.pk %}" 
-                                   class="btn btn-outline-primary" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
+                                <a href="{% url 'transactions:transaction_print_direct' transaction.pk %}" class="btn btn-dark" title="Print USB"><i class="bi bi-printer-fill"></i></a>
                                 {% endif %}
                                 
-                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ transaction.pk }}">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                {% if transaction.status != 'CANCELLED' %}
+                                <a href="{% url 'transactions:transaction_edit' transaction.pk %}" class="btn btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                                {% endif %}
+                                
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ transaction.pk }}"><i class="bi bi-trash"></i></button>
                             </div>
                             
                             <div class="modal fade" id="deleteModal{{ transaction.pk }}" tabindex="-1">
                                 <div class="modal-dialog">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title">Konfirmasi Hapus</h5>
+                                            <h5 class="modal-title">Hapus Transaksi</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <div class="modal-body">
-                                            Yakin ingin menghapus transaksi <strong>{{ transaction.invoice_number }}</strong> secara permanen?
+                                            Yakin ingin menghapus <strong>{{ transaction.invoice_number }}</strong>? Data tidak bisa kembali.
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                            <form method="post" action="{% url 'transactions:transaction_delete' transaction.pk %}" class="d-inline">
+                                            <form method="post" action="{% url 'transactions:transaction_delete' transaction.pk %}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-danger">Hapus</button>
                                             </form>
@@ -210,9 +173,9 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center py-4">
-                            <i class="bi bi-inbox display-4 text-muted"></i>
-                            <p class="text-muted mt-2">Tidak ada data transaksi</p>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox display-1"></i>
+                            <p class="mt-3">Belum ada data transaksi yang sesuai filter.</p>
                         </td>
                     </tr>
                     {% endfor %}

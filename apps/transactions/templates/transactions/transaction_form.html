@@ -10,21 +10,25 @@
 <style>
     .formset-row.deleted { display: none; }
     .select2-container { width: 100% !important; }
+    .table td { vertical-align: middle; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4 mb-5">
-    <h2 class="mt-4 mb-4">
-        <i class="bi bi-receipt me-2"></i>
-        {% if transaction %}Edit Transaksi {{ transaction.invoice_number }}{% else %}Transaksi Baru{% endif %}
-    </h2>
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+        <h2>
+            <i class="bi bi-receipt me-2"></i>
+            {% if transaction %}Edit Transaksi {{ transaction.invoice_number }}{% else %}Transaksi Baru{% endif %}
+        </h2>
+        <a href="{% url 'transactions:transaction_list' %}" class="btn btn-secondary">Batal</a>
+    </div>
 
     <form method="post" id="transactionForm">
         {% csrf_token %}
         
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">Info Transaksi</div>
+            <div class="card-header bg-primary text-white fw-bold">1. Informasi Pelanggan & Kendaraan</div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-4 mb-3">{{ form.customer|as_crispy_field }}</div>
@@ -37,9 +41,9 @@
 
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <span>Barang / Sparepart</span>
+                <span class="fw-bold">2. Barang / Sparepart</span>
                 <button type="button" class="btn btn-light btn-sm text-success fw-bold" id="add-item">
-                    <i class="bi bi-plus-circle"></i> Tambah Barang
+                    <i class="bi bi-plus-circle me-1"></i>Tambah Barang
                 </button>
             </div>
             <div class="card-body p-0">
@@ -48,11 +52,11 @@
                     <table class="table table-striped mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th width="40%">Item</th>
+                                <th width="35%">Nama Barang</th>
                                 <th width="15%">Qty</th>
                                 <th width="20%">Harga (@)</th>
-                                <th width="15%">Disc %</th>
-                                <th width="10%">Aksi</th>
+                                <th width="15%">Disc (%)</th>
+                                <th width="10%" class="text-center">Hapus</th>
                             </tr>
                         </thead>
                         <tbody id="item-tbody">
@@ -77,9 +81,9 @@
 
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                <span>Jasa / Service</span>
+                <span class="fw-bold">3. Jasa / Service</span>
                 <button type="button" class="btn btn-light btn-sm text-info fw-bold" id="add-service">
-                    <i class="bi bi-plus-circle"></i> Tambah Jasa
+                    <i class="bi bi-plus-circle me-1"></i>Tambah Jasa
                 </button>
             </div>
             <div class="card-body p-0">
@@ -88,11 +92,11 @@
                     <table class="table table-striped mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th width="40%">Nama Jasa</th>
+                                <th width="35%">Nama Jasa</th>
                                 <th width="15%">Qty</th>
                                 <th width="20%">Biaya (@)</th>
-                                <th width="15%">Disc %</th>
-                                <th width="10%">Aksi</th>
+                                <th width="15%">Disc (%)</th>
+                                <th width="10%" class="text-center">Hapus</th>
                             </tr>
                         </thead>
                         <tbody id="service-tbody">
@@ -115,23 +119,23 @@
             </div>
         </div>
 
-        <div class="card shadow-sm bg-light">
+        <div class="card shadow-sm bg-light mb-5">
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <label>Biaya Lain-lain (Rp)</label>
+                        <label class="fw-bold">Biaya Lain-lain (Rp)</label>
                         {{ form.other_charges }}
                     </div>
                     <div class="col-md-6">
-                        <label>Diskon Akhir (Rp)</label>
+                        <label class="fw-bold">Diskon Akhir (Rp)</label>
                         {{ form.discount_amount }}
                     </div>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Total Estimasi: <span class="text-primary" id="grand-total">Rp 0</span></h4>
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="bi bi-save"></i> Simpan Transaksi
+                    <h3 class="mb-0">Total: <span class="text-primary fw-bold" id="grand-total">Rp 0</span></h3>
+                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-save me-2"></i>SIMPAN
                     </button>
                 </div>
             </div>
@@ -173,7 +177,8 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(document).ready(function() {
-    // 1. FUNGSI INIT SELECT2
+    
+    // 1. Init Select2
     function initSelect2(element) {
         $(element).select2({
             theme: 'bootstrap-5',
@@ -182,112 +187,98 @@ $(document).ready(function() {
             allowClear: true
         });
     }
-
-    // Init awal untuk elemen yg sudah ada
     $('.select2-enable').select2({ theme: 'bootstrap-5', width: '100%' });
-    $('#item-tbody select').each(function() { initSelect2(this); });
-    $('#service-tbody select').each(function() { initSelect2(this); });
+    $('select').each(function() { initSelect2(this); });
 
-    // 2. FUNGSI TAMBAH BARIS (Generic)
+    // 2. Add Row
     function addRow(type) {
         const prefix = (type === 'item') ? 'items' : 'services';
         const tbodyId = `#${type}-tbody`;
         const emptyId = `#${type}-empty-form`;
-        const totalFormsInput = $(`#id_${prefix}-TOTAL_FORMS`);
+        const totalInput = $(`#id_${prefix}-TOTAL_FORMS`);
         
-        let formIdx = parseInt(totalFormsInput.val());
+        let idx = parseInt(totalInput.val());
+        let html = $(emptyId).html().replace(/__prefix__/g, idx);
         
-        // Ambil HTML dari template kosong & ganti __prefix__ dengan index
-        let newHtml = $(emptyId).html().replace(/__prefix__/g, formIdx);
-        
-        // Append ke tabel
-        $(tbodyId).append(newHtml);
-        
-        // Init Select2 di baris baru
+        $(tbodyId).append(html);
         initSelect2($(tbodyId).find(`tr:last select`));
-        
-        // Update Total Forms
-        totalFormsInput.val(formIdx + 1);
+        totalInput.val(idx + 1);
     }
 
-    $('#add-item').click(function() { addRow('item'); });
-    $('#add-service').click(function() { addRow('service'); });
+    $('#add-item').click(function(e) { e.preventDefault(); addRow('item'); });
+    $('#add-service').click(function(e) { e.preventDefault(); addRow('service'); });
 
-    // 3. FUNGSI HAPUS BARIS
-    $(document).on('click', '.remove-row', function() {
+    // 3. Remove Row
+    $(document).on('click', '.remove-row', function(e) {
+        e.preventDefault();
         let row = $(this).closest('tr');
-        let deleteInput = row.find('input[type="checkbox"][name$="-DELETE"]');
+        let tbody = row.closest('tbody');
+        let prefix = (tbody.attr('id') === 'item-tbody') ? 'items' : 'services';
+        let totalInput = $(`#id_${prefix}-TOTAL_FORMS`);
         
-        if (deleteInput.length) {
-            // Jika row dari database, centang delete & sembunyikan
+        // Cek apakah ini row yang sudah ada di database (punya ID)
+        let deleteInput = row.find('input[type="checkbox"][name$="-DELETE"]');
+        let hasId = row.find('input[type="hidden"][name$="-id"]').val();
+
+        if (hasId) {
+            // Kalau data lama: Jangan hapus HTML, cuma sembunyikan & centang DELETE
             deleteInput.prop('checked', true);
             row.addClass('deleted');
         } else {
-            // Jika row baru, hapus elemen
+            // Kalau data baru (belum save): Hapus HTML-nya & KURANGI TOTAL FORMS
             row.remove();
+            let currentTotal = parseInt(totalInput.val());
+            totalInput.val(currentTotal - 1);
+            
+            // Opsional: Re-index name attributes (supaya urut 0, 1, 2...)
+            // Tapi biasanya Django formset cukup pintar menangani index lompat kalau totalnya benar.
+            // Untuk aman, cukup kurangi total saja dulu.
         }
         calculateTotal();
     });
 
-    // 4. AUTO FILL HARGA (AJAX)
-    // Menggunakan event delegation agar jalan di row baru
+    // 4. Auto Fill Price
     $(document).on('change', 'select[name$="-item"]', function() {
-        let itemId = $(this).val();
+        let id = $(this).val();
         let row = $(this).closest('tr');
-        if(itemId) {
-            $.get(`/transactions/api/item-price/${itemId}/`, function(data) {
-                // Set nilai harga (User MASIH BISA EDIT karena ini input biasa)
-                row.find('input[name$="-unit_price"]').val(data.price);
-                calculateTotal();
-            });
-        }
+        if(id) $.get(`/transactions/api/item-price/${id}/`, function(data) {
+            row.find('input[name$="-unit_price"]').val(data.price);
+            calculateTotal();
+        });
     });
 
     $(document).on('change', 'select[name$="-service"]', function() {
-        let svcId = $(this).val();
+        let id = $(this).val();
         let row = $(this).closest('tr');
-        if(svcId) {
-            $.get(`/transactions/api/service-price/${svcId}/`, function(data) {
-                row.find('input[name$="-unit_price"]').val(data.price);
-                calculateTotal();
-            });
-        }
+        if(id) $.get(`/transactions/api/service-price/${id}/`, function(data) {
+            row.find('input[name$="-unit_price"]').val(data.price);
+            calculateTotal();
+        });
     });
 
-    // 5. HITUNG TOTAL LIVE
+    // 5. Calculate Total
     function calculateTotal() {
-        let grandTotal = 0;
-
-        // Loop Item
-        $('#item-tbody tr:not(.deleted)').each(function() {
+        let grand = 0;
+        
+        // Items & Services
+        $('.formset-row:not(.deleted)').each(function() {
             let qty = parseFloat($(this).find('input[name$="-quantity"]').val()) || 0;
             let price = parseFloat($(this).find('input[name$="-unit_price"]').val()) || 0;
             let disc = parseFloat($(this).find('input[name$="-discount_percentage"]').val()) || 0;
-            grandTotal += (qty * price) * ((100 - disc) / 100);
+            
+            grand += (qty * price) * ((100 - disc) / 100);
         });
 
-        // Loop Service
-        $('#service-tbody tr:not(.deleted)').each(function() {
-            let qty = parseFloat($(this).find('input[name$="-quantity"]').val()) || 0;
-            let price = parseFloat($(this).find('input[name$="-unit_price"]').val()) || 0;
-            let disc = parseFloat($(this).find('input[name$="-discount_percentage"]').val()) || 0;
-            grandTotal += (qty * price) * ((100 - disc) / 100);
-        });
-
-        // Biaya Lain & Diskon Akhir
+        // Extra
         let other = parseFloat($('input[name="other_charges"]').val()) || 0;
-        let finalDisc = parseFloat($('input[name="discount_amount"]').val()) || 0;
-
-        grandTotal = grandTotal + other - finalDisc;
-
-        // Format Rupiah
-        $('#grand-total').text('Rp ' + grandTotal.toLocaleString('id-ID'));
+        let discFinal = parseFloat($('input[name="discount_amount"]').val()) || 0;
+        
+        grand = grand + other - discFinal;
+        
+        $('#grand-total').text('Rp ' + grand.toLocaleString('id-ID'));
     }
 
-    // Trigger hitung saat ada input berubah
     $(document).on('input change', 'input, select', calculateTotal);
-    
-    // Hitung saat load awal
     calculateTotal();
 });
 </script>

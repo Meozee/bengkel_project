@@ -4,64 +4,25 @@
     <meta charset="UTF-8">
     <title>Struk #{{ transaction.invoice_number }}</title>
     <style>
-        /* RESET TOTAL */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        /* KITA HAPUS SETTING @PAGE SIZE BIAR IKUT DRIVER */
         @media print {
-            body {
-                margin: 0;
-                padding: 0;
-                width: 100%; /* Ikuti lebar kertas printer */
-            }
-            .btn-print {
-                display: none !important;
-            }
+            @page { margin: 0; size: 58mm auto; }
+            body { margin: 0; padding: 0; }
+            .btn-print { display: none !important; }
         }
-
         body {
-            font-family: 'Courier New', monospace; /* Font paling aman */
-            font-size: 12px; 
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
             font-weight: bold;
             background: #fff;
             color: #000;
-            /* Jangan dipaksa 58mm fix, kasih sedikit ruang */
-            width: 100%; 
-            max-width: 58mm; /* Batas maksimal visual di layar */
-            margin: 0 auto; 
+            width: 100%;
+            max-width: 58mm;
+            margin: 0 auto;
         }
-
-        .content-wrapper {
-            padding: 2px;
-        }
-
-        .header, .footer { 
-            text-align: center; 
-            margin-bottom: 5px; 
-        }
-        
-        .divider { 
-            border-top: 1px dashed #000; 
-            margin: 5px 0; 
-            display: block; 
-        }
-
-        /* Flexbox sederhana */
-        .row {
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .item-name {
-            display: block;
-            margin-bottom: 2px;
-        }
-
-        /* Tombol Print */
+        .header, .footer { text-align: center; margin-bottom: 5px; }
+        .divider { border-top: 1px dashed #000; margin: 5px 0; display: block; }
+        .row { display: flex; justify-content: space-between; }
+        .item-name { display: block; margin-bottom: 2px; }
         .btn-print { 
             display: block; width: 100%; padding: 10px; margin-bottom: 10px;
             background: #333; color: #fff; text-align: center; text-decoration: none;
@@ -70,10 +31,9 @@
     </style>
 </head>
 <body>
-
     <a href="#" onclick="window.print()" class="btn-print">🖨️ PRINT</a>
-
-    <div class="content-wrapper">
+    
+    <div style="padding: 2px;">
         <div class="header">
             <div style="font-size: 14px; font-weight: 900;">{{ shop_name }}</div>
             <div>{{ shop_address }}</div>
@@ -112,7 +72,7 @@
 
         <div class="divider"></div>
 
-        <div style="font-size: 14px;">
+        <div style="font-size: 14px; font-weight: bold;">
             <div class="row">
                 <span>TOTAL</span>
                 <span>Rp {{ transaction.total_amount|floatformat:0 }}</span>
@@ -125,6 +85,5 @@
             Barang tdk dpt ditukar
         </div>
     </div>
-
 </body>
 </html>

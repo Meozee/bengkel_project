@@ -178,6 +178,6 @@ LOGOUT_REDIRECT_URL = 'accounts:login'
 # ESC/POS SETTINGS (USB)
 # =====================================
 ESC_POS_PRINTER = {
-    'VID': 0x0fe6,  # QPOS Q58M VID Vendor ID (default)
-    'PID': 0x811e,  # PID Product ID (default)
+    'VID': 0x0483,
+    'PID': 0x070b,
 }
