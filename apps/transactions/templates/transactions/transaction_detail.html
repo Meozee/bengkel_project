@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
-{% load humanize %} {% block title %}{{ title }}{% endblock %}
+{% load humanize %}
 
+{% block title %}{{ title }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4">
@@ -11,8 +12,11 @@
                 <i class="bi bi-arrow-left"></i> Kembali
             </a>
             {% if transaction.status == 'COMPLETED' %}
-            <a href="#" onclick="window.open('{% url 'transactions:transaction_print' transaction.pk %}', '_blank', 'width=400,height=600')" class="btn btn-dark">
-                <i class="bi bi-printer"></i> Cetak Struk
+            <a href="{% url 'transactions:transaction_print_direct' transaction.pk %}" class="btn btn-dark">
+                <i class="bi bi-printer-fill"></i> Cetak USB
+            </a>
+            <a href="#" onclick="window.open('{% url 'transactions:transaction_print' transaction.pk %}', '_blank', 'width=400,height=600')" class="btn btn-outline-secondary">
+                <i class="bi bi-file-earmark-pdf"></i> Preview
             </a>
             {% endif %}
             {% if transaction.status != 'CANCELLED' %}

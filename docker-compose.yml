@@ -3,28 +3,38 @@ version: '3.8'
 services:
   web:
     build: .
-    user: "${UID}:${GID}"
-    # Ganti gunicorn dengan runserver
+    container_name: bengkel_web
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - .:/app
+      - /dev/bus/usb:/dev/bus/usb     # USB passthrough
     ports:
-      - "8000:8000"  # Akses via http://localhost:8000 atau http://<IP_LAPTOP>:8000
+      - "8000:8000"
     env_file:
       - .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    privileged: true   # Penting agar container bisa akses USB
 
   db:
     image: postgres:14-alpine
+    container_name: bengkel_db
+    restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5433:5432"  # Expose on 5433 to avoid conflict with local postgres
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   postgres_data:

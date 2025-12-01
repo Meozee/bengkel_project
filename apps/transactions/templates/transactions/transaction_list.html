@@ -166,9 +166,11 @@
                         <td>
                             <div class="btn-group btn-group-sm">
                                 {% if transaction.status == 'COMPLETED' %}
-                                <a href="#" onclick="window.open('{% url 'transactions:transaction_print' transaction.pk %}', '_blank', 'width=400,height=600')" 
-                                   class="btn btn-outline-secondary" title="Cetak Struk">
-                                    <i class="bi bi-printer"></i>
+                                <a href="{% url 'transactions:transaction_print_direct' transaction.pk %}" class="btn btn-dark" title="Print USB">
+                                    <i class="bi bi-printer-fill"></i>
+                                </a>
+                                <a href="#" onclick="window.open('{% url 'transactions:transaction_print' transaction.pk %}', '_blank', 'width=400,height=600')" class="btn btn-outline-secondary" title="Preview Struk">
+                                    <i class="bi bi-file-earmark-pdf"></i>
                                 </a>
                                 {% endif %}
 

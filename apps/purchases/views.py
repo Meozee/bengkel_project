@@ -86,6 +86,41 @@ class PurchaseOrderListView(LoginRequiredMixin, ListView):
         context['end_date'] = self.request.GET.get('end_date', '')
         return context
 
+
+# --- VIEW BARU: DETAIL PO ---
+@login_required
+def purchase_detail(request, pk):
+    """Melihat rincian Purchase Order."""
+    po = get_object_or_404(PurchaseOrder, pk=pk)
+    context = {
+        'po': po,
+        'title': f"Detail PO-{po.id}"
+    }
+    return render(request, 'purchases/purchase_detail.html', context)
+
+# --- VIEW BARU: QUICK STATUS UPDATE ---
+@login_required
+def update_status(request, pk, new_status):
+    """Mengubah status PO langsung dari List."""
+    po = get_object_or_404(PurchaseOrder, pk=pk)
+    
+    if new_status not in PurchaseOrder.StatusChoices.values:
+        messages.error(request, "Status tidak valid.")
+        return redirect('purchases:purchase_list')
+
+    try:
+        # Logic stok sudah di-handle oleh signals.py saat save()
+        po.status = new_status
+        po.save() 
+        
+        log_activity(request, 'UPDATE_STATUS', 'PurchaseOrder', po.pk, f"Ubah status PO #{po.pk} ke {new_status}")
+        messages.success(request, f"Status PO-{po.pk} berhasil diubah menjadi {po.get_status_display()}")
+            
+    except Exception as e:
+        messages.error(request, f"Gagal update status: {e}")
+        
+    return redirect('purchases:purchase_list')
+    
 @login_required
 def purchase_form_view(request, pk=None):
     """View untuk Create dan Edit PO."""

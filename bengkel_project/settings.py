@@ -13,19 +13,19 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-7_2@ew)33gyu(gflo)hgrgk6k6pafsu&imf%nk+)*ei6+n^vlo')
-
-# SECURITY WARNING: don't run with debug turned on in production!
+# =====================================
+# BASIC SETTINGS
+# =====================================
+SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-key')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
+ALLOWED_HOSTS = ['*']  # allow all for docker / LAN
 
-# Izinkan akses dari localhost, 127.0.0.1, dan semua IP lain di jaringan lokal
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '192.168.1.25']
 
-# Application definition
+# =====================================
+# INSTALLED APPS
+# =====================================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -33,15 +33,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.humanize',  # <-- TAMBAHKAN INI
-    
+    'django.contrib.humanize',
+
     # Third-party apps
     'crispy_forms',
     'crispy_bootstrap5',
     'django_extensions',
     'debug_toolbar',
-    
-    # Our apps
+
+    # Local apps
     'apps.accounts',
     'apps.dashboard',
     'apps.transactions.apps.TransactionsConfig',
@@ -52,6 +52,10 @@ INSTALLED_APPS = [
     'apps.reports',
 ]
 
+
+# =====================================
+# MIDDLEWARE
+# =====================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -60,9 +64,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # Django Debug Toolbar Middleware
+
+    # Debug Toolbar (harus paling bawah)
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
+
 
 ROOT_URLCONF = 'bengkel_project.urls'
 
@@ -84,72 +90,94 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'bengkel_project.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+
+# =====================================
+# DATABASE
+# =====================================
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME'),
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
+        'HOST': os.getenv('DB_HOST', 'db'),
+        'PORT': os.getenv('DB_PORT', 5432),
     }
 }
 
-# Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
+
+# =====================================
+# PASSWORD VALIDATION
+# =====================================
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
+
+# =====================================
+# INTERNATIONALIZATION
+# =====================================
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Jakarta'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']  # Tempat file CSS/JS asli disimpan
 
-# Media files (User uploaded files)
+# =====================================
+# STATIC & MEDIA (Docker Friendly)
+# =====================================
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']   # dev mode
+STATIC_ROOT = BASE_DIR / 'staticfiles'     # collected in docker production
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Django Crispy Forms
+# =====================================
+# CRISPY FORMS
+# =====================================
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# Django Debug Toolbar
-INTERNAL_IPS = ["127.0.0.1"]
 
-# Custom User Model
+# =====================================
+# DEBUG TOOLBAR (Fix Docker)
+# =====================================
+INTERNAL_IPS = [
+    "127.0.0.1",
+    "0.0.0.0",
+]
+
+# Fix Debug Toolbar in Docker
+import socket
+try:
+    INTERNAL_IPS += [socket.gethostbyname(socket.gethostname())]
+except:
+    pass
+
+
+# =====================================
+# CUSTOM USER MODEL
+# =====================================
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
 
-# ==================================
-# PENGATURAN AUTENTIKASI
-# ==================================
-
-# URL tempat halaman login berada
+# =====================================
+# LOGIN SETTINGS
+# =====================================
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'dashboard:index'
-LOGOUT_REDIRECT_URL = 'accounts:login' # Ini juga diganti
+LOGOUT_REDIRECT_URL = 'accounts:login'
+
+
+# =====================================
+# ESC/POS SETTINGS (USB)
+# =====================================
+ESC_POS_PRINTER = {
+    'VID': 0x0fe6,  # QPOS Q58M VID Vendor ID (default)
+    'PID': 0x811e,  # PID Product ID (default)
+}

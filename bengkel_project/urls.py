@@ -10,15 +10,10 @@ urlpatterns = [
     # 1. Django Admin
     path('admin/', admin.site.urls),
 
-    # 2. ACCOUNTS (Login, Logout, Logs)
-    # Ini yang memperbaiki error 'namespace not registered'.
-    # Semua URL di dalam apps/accounts/urls.py akan diawali dengan 'accounts/'
-    # Contoh: localhost:8000/accounts/login/
-    # Contoh: localhost:8000/accounts/logs/
-    path('accounts/', include('apps.accounts.urls')), 
+    # 2. ACCOUNTS
+    path('accounts/', include('apps.accounts.urls')),
 
-    # 3. DASHBOARD (Halaman Utama)
-    # Kita taruh di root '' agar saat buka localhost:8000 langsung ke dashboard
+    # 3. DASHBOARD
     path('', include('apps.dashboard.urls')),
 
     # 4. APPS LAINNYA
@@ -29,11 +24,13 @@ urlpatterns = [
     path('expenses/', include('apps.expenses.urls')),
     path('reports/', include('apps.reports.urls')),
 
-    # 5. Debug Toolbar (Hanya aktif jika DEBUG=True)
+    # 5. Debug Toolbar
     path("__debug__/", include("debug_toolbar.urls")),
 ]
 
-# Konfigurasi untuk file statis/media saat development
 if settings.DEBUG:
+    # MEDIA OK
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+    # STATIC — hanya gunakan STATICFILES_DIRS (bukan STATIC_ROOT!)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])

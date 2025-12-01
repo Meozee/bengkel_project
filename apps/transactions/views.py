@@ -244,3 +244,131 @@ def api_get_item_price(request, item_id):
 def api_get_service_price(request, service_id):
     svc = get_object_or_404(Service, pk=service_id)
     return JsonResponse({'price': svc.price})
+
+
+    # apps/transactions/views.py
+
+# Import Library Printer
+from escpos.printer import Usb
+from escpos.exceptions import USBNotFoundError, Error as EscposError
+
+import usb.core
+import usb.util
+
+@login_required
+def transaction_print_direct(request, pk):
+    txn = get_object_or_404(Transaction, pk=pk)
+    
+    # ID Printer QPOS (Sesuai lsusb kamu)
+    VENDOR_ID = 0x0483
+    PRODUCT_ID = 0x070b
+
+    try:
+        # 1. Cari Printer
+        printer = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
+        if printer is None:
+            messages.error(request, "Printer USB Tidak Ditemukan! Cek kabel.")
+            return redirect('transactions:transaction_detail', pk=pk)
+
+        # 2. Detach Kernel Driver (Supaya Linux tidak memonopoli printer)
+        try:
+            if printer.is_kernel_driver_active(0):
+                printer.detach_kernel_driver(0)
+        except usb.core.USBError:
+            pass # Abaikan jika gagal detach
+
+        # 3. Set Config
+        printer.set_configuration()
+        cfg = printer.get_active_configuration()
+        intf = cfg[(0, 0)]
+
+        # 4. Cari Endpoint OUT (Pintu Keluar Data)
+        ep_out = usb.util.find_descriptor(
+            intf,
+            custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT
+        )
+
+        if ep_out is None:
+            messages.error(request, "Endpoint Printer Bermasalah.")
+            return redirect('transactions:transaction_detail', pk=pk)
+
+        # --- FUNGSI KIRIM TEXT ---
+        def print_text(text):
+            # Encode ke format yg dimengerti printer china (GB18030 atau CP437)
+            ep_out.write(text.encode('gb18030', errors='ignore'))
+
+        # --- MULAI CETAK (ESC/POS COMMANDS) ---
+        
+        # Command Dasar
+        CMD_INIT = b'\x1b\x40'
+        CMD_CENTER = b'\x1b\x61\x01'
+        CMD_LEFT = b'\x1b\x61\x00'
+        CMD_RIGHT = b'\x1b\x61\x02'
+        CMD_CUT = b'\x1d\x56\x00'
+        
+        # Kirim Init
+        ep_out.write(CMD_INIT)
+        
+        # Header
+        ep_out.write(CMD_CENTER)
+        print_text("JATIWANGI MOTOR\n")
+        print_text("Jl. Raya President Univ\n")
+        print_text("--------------------------------\n")
+        
+        # Info
+        ep_out.write(CMD_LEFT)
+        print_text(f"No Inv : {txn.invoice_number}\n")
+        print_text(f"Tgl    : {txn.created_at.strftime('%d/%m/%y %H:%M')}\n")
+        print_text(f"Plg    : {txn.customer.name if txn.customer else 'Umum'}\n")
+        print_text(f"Mekanik: {txn.mechanic.name if txn.mechanic else '-'}\n")
+        print_text("--------------------------------\n")
+        
+        # Items
+        for item in txn.items.all():
+            print_text(f"{item.item.name[:30]}\n") # Nama barang
+            
+            # Hitung string harga
+            qty = str(item.quantity)
+            price = f"{item.unit_price:,.0f}".replace(",", ".")
+            subtotal = f"{item.subtotal:,.0f}".replace(",", ".")
+            
+            print_text(f"{qty} x {price} = {subtotal}\n")
+
+        # Services
+        for svc in txn.services.all():
+            print_text(f"{svc.service.name[:30]}\n")
+            
+            qty = str(svc.quantity)
+            price = f"{svc.unit_price:,.0f}".replace(",", ".")
+            subtotal = f"{svc.subtotal:,.0f}".replace(",", ".")
+            
+            print_text(f"{qty} x {price} = {subtotal}\n")
+            
+        print_text("--------------------------------\n")
+        
+        # Total
+        ep_out.write(CMD_RIGHT)
+        if txn.discount_amount > 0:
+            disc = f"{txn.discount_amount:,.0f}".replace(",", ".")
+            print_text(f"Diskon: -{disc}\n")
+            
+        grand_total = f"{txn.total_amount:,.0f}".replace(",", ".")
+        print_text(f"TOTAL: Rp {grand_total}\n")
+        
+        # Footer
+        ep_out.write(CMD_CENTER)
+        print_text("\n")
+        print_text("Terima Kasih\n")
+        print_text("Barang yg dibeli tdk dpt ditukar\n")
+        print_text("\n\n\n") # Feed kertas sedikit
+        
+        # Potong
+        ep_out.write(CMD_CUT)
+
+        messages.success(request, "Struk berhasil dicetak (USB Direct)!")
+
+    except Exception as e:
+        # Tangkap error biar web gak crash
+        messages.error(request, f"Gagal Print USB: {str(e)}")
+
+    return redirect('transactions:transaction_detail', pk=pk)

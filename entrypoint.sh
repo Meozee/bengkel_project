@@ -1,22 +1,24 @@
 #!/bin/sh
 
-# Cek apakah variabel DB_HOST dan DB_PORT sudah ada
+# Cek apakah variabel environment tersedia
 if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ]; then
-    echo "Error: DB_HOST or DB_PORT is not set. Please check your .env file."
+    echo "❌ ERROR: DB_HOST atau DB_PORT tidak di-set. Periksa file .env kamu!"
     exit 1
 fi
 
-echo "Waiting for postgres..."
+echo "🔄 Menunggu PostgreSQL di $DB_HOST:$DB_PORT ..."
 
-# Loop sampai koneksi ke database berhasil
-while ! nc -z $DB_HOST $DB_PORT; do
-    sleep 0.1
+# Tunggu sampai PostgreSQL siap
+while ! nc -z "$DB_HOST" "$DB_PORT"; do
+    sleep 0.5
 done
 
-echo "PostgreSQL started"
+echo "✅ PostgreSQL sudah siap!"
 
 # Jalankan migrate
+echo "🚀 Jalankan migrate..."
 python manage.py migrate --noinput
 
-# Jalankan perintah utama dari Dockerfile (misal: python manage.py runserver)
+# Jalankan perintah utama (runserver)
+echo "✨ Menjalankan server..."
 exec "$@"

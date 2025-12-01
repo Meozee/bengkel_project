@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+        <h1><i class="bi bi-file-earmark-text"></i> Purchase Order #{{ po.id }}</h1>
+        <div>
+            <a href="{% url 'purchases:purchase_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Kembali
+            </a>
+            {% if po.status != 'CANCELLED' %}
+            <a href="{% url 'purchases:purchase_update' po.pk %}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Status:</strong> 
+                {% if po.status == 'COMPLETED' %}
+                    <span class="badge bg-success fs-6">Selesai (Barang Diterima)</span>
+                {% elif po.status == 'PENDING' %}
+                    <span class="badge bg-warning text-dark fs-6">Proses (Pending)</span>
+                {% else %}
+                    <span class="badge bg-danger fs-6">Dibatalkan (Cancelled)</span>
+                {% endif %}
+            </div>
+            <div>
+                <strong>Tanggal Order:</strong> {{ po.order_date|date:"d M Y, H:i" }} <br>
+                <strong>Estimasi Tiba:</strong> {{ po.expected_delivery_date|date:"d M Y"|default:"-" }}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">Informasi Vendor & Pembeli</div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td width="35%">Vendor</td>
+                            <td>: <strong>{{ po.vendor.name }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Kontak Vendor</td>
+                            <td>: {{ po.vendor.phone_number|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"><hr class="my-1"></td>
+                        </tr>
+                        <tr>
+                            <td>Penanggung Jawab</td>
+                            <td>: <strong>{{ po.purchaser_name }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-light">Catatan</div>
+                <div class="card-body">
+                    {% if po.notes %}
+                        {{ po.notes|linebreaks }}
+                    {% else %}
+                        <em class="text-muted">Tidak ada catatan tambahan.</em>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">Rincian Barang Belanja</div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Nama Barang</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Harga Beli (@)</th>
+                                <th class="text-end pe-3">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in po.items.all %}
+                            <tr>
+                                <td class="ps-3">
+                                    <strong>{{ item.item.name }}</strong><br>
+                                    <small class="text-muted">SKU: {{ item.item.sku|default:"-" }}</small>
+                                </td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">Rp {{ item.unit_price|intcomma }}</td>
+                                <td class="text-end pe-3 fw-bold">Rp {{ item.subtotal|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-light border-top">
+                                <td colspan="3" class="text-end fw-bold fs-5">TOTAL PEMBELIAN</td>
+                                <td class="text-end pe-3 fw-bold fs-5 text-primary">Rp {{ po.total_amount|intcomma }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

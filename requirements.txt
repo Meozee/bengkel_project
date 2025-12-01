@@ -1,33 +1,45 @@
-# requirements.txt
+# =======================
+# Django Core
+# =======================
+Django==4.2.11
+psycopg2-binary==2.9.9
+python-dotenv==1.0.1
+gunicorn==21.2.0
 
-# --- Core ---
-django
-psycopg2-binary
-python-dotenv         # <-- Untuk membaca file .env di settings.py
-gunicorn              # <-- WSGI Server untuk production, Nginx akan berkomunikasi dengan ini
+# =======================
+# Forms & Frontend
+# =======================
+django-crispy-forms==2.1
+crispy-bootstrap5==0.7
 
-# --- Forms & Frontend ---
-django-crispy-forms
-crispy-bootstrap5     # (Jika menggunakan Bootstrap 5)
+# =======================
+# Dev Tools
+# =======================
+django-extensions==3.2.3
+django-debug-toolbar==4.3.0
 
-# --- Utilities & Debugging ---
-django-extensions
-django-debug-toolbar  # <-- Sangat penting untuk development
-Pillow
+# =======================
+# Images
+# =======================
+Pillow==10.3.0
 
-# --- Data & Reporting ---
-pandas
-openpyxl
-WeasyPrint
-openpyxl              # <-- Untuk export/import Excel
-reportlab             # (atau weasyprint, sesuai pilihanmu)
-django-filter
+# =======================
+# Data & Reporting
+# =======================
+pandas==2.2.1
+openpyxl==3.1.2
+reportlab==4.1.0
+django-filter==24.2
 
-# --- Code Quality (Opsional tapi sangat direkomendasikan) ---
-black                 # <-- Formatter kode otomatis
-flake8                # <-- Pengecek style guide
-isort                 # <-- Mengurutkan import secara otomatis
+# =======================
+# Printing – QPOS USB Thermal
+# =======================
+python-escpos==3.2
+pyusb==1.2.1
 
-# --- Visualisasi ---
-# Untuk visualisasi, biasanya library-nya ada di frontend (JS).
-# Jadi, pandas di backend cukup untuk menyiapkan data.
+# =======================
+# Code Quality (Optional)
+# =======================
+black==24.4.2
+flake8==7.0.0
+isort==5.13.2
