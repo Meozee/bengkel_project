@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.db.models import Q
 from decimal import Decimal
 from datetime import datetime, timedelta
+from django.core.exceptions import ValidationError
 
 # Import Library USB Raw (Sesuai tes berhasil)
 import usb.core
@@ -226,14 +227,22 @@ def update_status(request, pk, new_status):
         return redirect('transactions:transaction_list')
 
     try:
-        txn.status = new_status
-        txn.save() # Signals akan kurangi/tambah stok
-        
-        log_activity(request, 'UPDATE_STATUS', 'Transaction', txn.pk, f"Mengubah status ke {new_status}")
-        messages.success(request, f"Status berubah menjadi {txn.get_status_display()}")
+        # ATOMIC: Ini kuncinya! 
+        # Jika ada error di signals (stok kurang), perubahan txn.status juga dibatalkan.
+        with transaction.atomic():
+            txn.status = new_status
+            txn.save()  # Signal stok berjalan di sini
             
+            log_activity(request, 'UPDATE_STATUS', 'Transaction', txn.pk, f"Mengubah status ke {new_status}")
+            messages.success(request, f"Status berubah menjadi {txn.get_status_display()}")
+            
+    except ValidationError as e:
+        # Tangkap pesan error dari signals.py (Stok kurang)
+        # Status di database otomatis ROLLBACK (tetap Pending)
+        messages.error(request, f"Gagal update status: {e.messages[0] if hasattr(e, 'messages') else str(e)}")
+        
     except Exception as e:
-        messages.error(request, f"Gagal update status: {e}")
+        messages.error(request, f"Terjadi kesalahan sistem: {str(e)}")
         
     return redirect('transactions:transaction_list')
 
