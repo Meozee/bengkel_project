@@ -114,3 +114,31 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Cek apakah ada tab tersimpan di memori browser
+        var activeTab = localStorage.getItem('activeLogTab');
+        
+        if (activeTab) {
+            // Cari tombol tab yang ID-nya sesuai
+            var tabToActivate = document.querySelector('#' + activeTab);
+            // Jika ketemu, klik tombol itu
+            if (tabToActivate) {
+                var tabInstance = new bootstrap.Tab(tabToActivate);
+                tabInstance.show();
+            }
+        }
+
+        // 2. Pasang "Penyadap" di setiap tombol tab
+        var tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabEls.forEach(function(tabEl) {
+            tabEl.addEventListener('shown.bs.tab', function (event) {
+                // Setiap kali user klik tab, simpan ID-nya ke memori
+                localStorage.setItem('activeLogTab', event.target.id);
+            });
+        });
+    });
+</script>
+{% endblock %}

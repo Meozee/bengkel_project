@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<h2 class="text-danger">Laporan Barang Mati (Dead Stock)</h2>
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get">
+            <div class="input-group">
+                <span class="input-group-text">Barang tidak laku selama (hari):</span>
+                <input type="number" name="days" class="form-control" value="{{ days }}" min="30">
+                <button type="submit" class="btn btn-danger">Cek Barang Mati</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header text-end">
+        <a href="{% url 'reports:export_dead_stock' %}?days={{ days }}" class="btn btn-success btn-sm">Export Excel</a>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr><th>Nama Barang</th><th class="text-center">Stok</th><th>Terakhir Terjual</th><th>Nilai Aset Mandeg</th></tr>
+            </thead>
+            <tbody>
+                {% for item in dead_stock %}
+                <tr>
+                    <td>{{ item.item.name }}</td>
+                    <td class="text-center fw-bold">{{ item.item.quantity }}</td>
+                    <td>
+                        {% if item.last_sale %}{{ item.last_sale|date:"d M Y" }} ({{ item.days_inactive }} hari lalu)
+                        {% else %}<span class="badge bg-secondary">Belum Pernah Terjual</span>{% endif %}
+                    </td>
+                    <td class="text-danger fw-bold">Rp {{ item.asset_value|intcomma }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center py-5">Bagus! Tidak ada barang mati.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

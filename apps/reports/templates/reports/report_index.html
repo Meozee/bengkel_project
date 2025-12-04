@@ -50,5 +50,34 @@
             </div>
         </div>
     </div>
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 text-center shadow-sm report-card">
+            <div class="card-body">
+                <i class="bi bi-pie-chart fs-1 text-danger"></i>
+                <h5 class="card-title mt-3">Rincian Pengeluaran</h5>
+                <p class="card-text text-muted">Detail expense per kategori.</p>
+                <a href="{% url 'reports:expense_breakdown' %}" class="btn btn-danger stretched-link">Lihat</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 text-center shadow-sm report-card">
+            <div class="card-body">
+                <i class="bi bi-trash3 fs-1 text-secondary"></i>
+                <h5 class="card-title mt-3">Barang Mati (Dead Stock)</h5>
+                <p class="card-text text-muted">Barang yang lama tidak laku.</p>
+                <a href="{% url 'reports:dead_stock_report' %}" class="btn btn-secondary stretched-link">Lihat</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 text-center shadow-sm report-card">
+            <div class="card-body">
+                <i class="bi bi-cart-plus fs-1 text-primary"></i>
+                <h5 class="card-title mt-3">Laporan Penjualan</h5>
+                <p class="card-text text-muted">Detail item terjual & profit.</p>
+                <a href="{% url 'reports:sales_report' %}" class="btn btn-primary stretched-link">Lihat</a>
+            </div>
+        </div>
     </div>
 {% endblock %}

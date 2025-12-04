@@ -1,15 +1,58 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+  /* Custom CSS untuk mempercantik List Group */
+  .custom-list-item {
+    transition: all 0.3s ease-in-out; /* Animasi halus */
+    border-left: 5px solid transparent; /* Garis dekorasi kiri */
+    color: #333 !important; /* PAKSA teks warna gelap agar terlihat */
+    background-color: #fff !important; /* Pastikan background putih */
+  }
+
+  /* Efek saat Hover */
+  .custom-list-item:hover {
+    transform: scale(1.02); /* Membesar sedikit (102%) */
+    background-color: #f8f9fa !important; /* Warna background agak abu saat hover */
+    border-left: 5px solid #dc3545; /* Garis merah (sesuai tema Garuda) di kiri */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Efek bayangan timbul */
+    z-index: 10; /* Agar item yang di-hover muncul di paling depan */
+    font-weight: 500; /* Teks jadi agak tebal */
+    cursor: default;
+  }
+</style>
+
 <div class="container mt-4">
-  <h3>Detail Barang</h3>
-  <ul class="list-group">
-    <li class="list-group-item"><strong>Nama:</strong> {{ item.name }}</li>
-    <li class="list-group-item"><strong>Kategori:</strong> {{ item.category.name }}</li>
-    <li class="list-group-item"><strong>Harga Jual:</strong> Rp{{ item.sell_price|floatformat:0 }}</li>
-    <li class="list-group-item"><strong>Jumlah:</strong> {{ item.quantity }}</li>
-    <li class="list-group-item"><strong>Satuan:</strong> {{ item.unit }}</li>
-  </ul>
-  <a href="{% url 'inventory:inventory_list' %}" class="btn btn-secondary mt-3">Kembali</a>
+  <div class="card shadow-sm">
+    <div class="card-header bg-danger text-white">
+      <h3 class="mb-0"><i class="bi bi-box-seam"></i> Detail Barang</h3>
+    </div>
+    <div class="card-body">
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item custom-list-item">
+          <small class="text-muted d-block">Nama Barang</small>
+          <span class="fs-5">{{ item.name }}</span>
+        </li>
+        <li class="list-group-item custom-list-item">
+          <small class="text-muted d-block">Kategori</small>
+          <span class="fs-5">{{ item.category.name }}</span>
+        </li>
+        <li class="list-group-item custom-list-item">
+          <small class="text-muted d-block">Harga Jual</small>
+          <span class="fs-4 text-success fw-bold">Rp{{ item.sell_price|floatformat:0 }}</span>
+        </li>
+        <li class="list-group-item custom-list-item">
+          <small class="text-muted d-block">Stok Tersedia</small>
+          <span class="fs-5">{{ item.quantity }} {{ item.unit }}</span>
+        </li>
+      </ul>
+      
+      <div class="mt-4">
+        <a href="{% url 'inventory:inventory_list' %}" class="btn btn-secondary">
+          <i class="bi bi-arrow-left"></i> Kembali
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

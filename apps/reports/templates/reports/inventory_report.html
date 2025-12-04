@@ -42,6 +42,7 @@
                         <td class="text-center fw-bold fs-5">{{ item.quantity }}</td>
                         <td class="text-center text-muted">{{ item.reorder_threshold }}</td>
                         
+                        <!-- Kolom Baru: Nilai Aset -->
                         <td class="text-end">
                             Rp {{ item.asset_value|intcomma }}<br>
                             <small class="text-muted">@ Rp {{ item.buy_price|intcomma }}</small>

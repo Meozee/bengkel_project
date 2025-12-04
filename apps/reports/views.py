@@ -14,13 +14,19 @@ from .utils import (
     generate_financial_report, 
     generate_low_stock_report, 
     generate_mechanic_performance_report,
-    generate_customer_report
+    generate_customer_report,        # <--- TAMBAHKAN KOMA
+    generate_expense_breakdown,
+    generate_dead_stock_report,
+    generate_sales_report
 )
 from .exports import (
     export_financial_report_to_excel, 
     export_inventory_report_to_pdf,
     export_customer_report_to_excel,
-    export_mechanic_report_to_excel
+    export_mechanic_report_to_excel, # <--- TAMBAHKAN KOMA
+    export_expense_breakdown_to_excel,
+    export_dead_stock_to_excel,
+    export_sales_report_to_excel
 )
 from apps.master_data.models import Mechanic
 
@@ -189,3 +195,102 @@ def export_mechanic_report(request):
         return response
     except Exception:
         return HttpResponse("Error generate report", status=400)
+
+
+        # === VIEW BARU ===
+
+@login_required
+def expense_breakdown_view(request):
+    today = timezone.now().date()
+    default_start = today.replace(day=1)
+    
+    start_date_str = request.GET.get('start_date', default_start.strftime('%Y-%m-%d'))
+    end_date_str = request.GET.get('end_date', today.strftime('%Y-%m-%d'))
+
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        report_data = generate_expense_breakdown(start_date, end_date)
+        
+        log_activity(request, 'VIEW_REPORT', 'Report: Expense Breakdown', '', f"{start_date_str} - {end_date_str}")
+    except ValueError:
+        report_data = None
+
+    context = {'start_date': start_date_str, 'end_date': end_date_str, 'report_data': report_data}
+    return render(request, 'reports/expense_breakdown.html', context)
+
+@login_required
+def dead_stock_view(request):
+    days = request.GET.get('days', 90) # Default 90 hari
+    dead_stock = generate_dead_stock_report(days)
+    
+    log_activity(request, 'VIEW_REPORT', 'Report: Dead Stock', '', f"Threshold: {days} hari")
+    
+    context = {'dead_stock': dead_stock, 'days': days}
+    return render(request, 'reports/dead_stock_report.html', context)
+
+@login_required
+def sales_report_view(request):
+    today = timezone.now().date()
+    default_start = today.replace(day=1)
+    
+    start_date_str = request.GET.get('start_date', default_start.strftime('%Y-%m-%d'))
+    end_date_str = request.GET.get('end_date', today.strftime('%Y-%m-%d'))
+
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        report_data = generate_sales_report(start_date, end_date)
+        
+        log_activity(request, 'VIEW_REPORT', 'Report: Sales', '', f"{start_date_str} - {end_date_str}")
+    except ValueError:
+        report_data = None
+
+    context = {'start_date': start_date_str, 'end_date': end_date_str, 'report_data': report_data}
+    return render(request, 'reports/sales_report.html', context)
+
+# === EXPORT BARU ===
+
+@login_required
+def export_expense_breakdown(request):
+    start = request.GET.get('start_date')
+    end = request.GET.get('end_date')
+    s = datetime.strptime(start, '%Y-%m-%d').date()
+    e = datetime.strptime(end, '%Y-%m-%d').date()
+    
+    data = generate_expense_breakdown(s, e)
+    buffer = export_expense_breakdown_to_excel(data)
+    
+    log_activity(request, 'EXPORT_EXCEL', 'Report: Expense Breakdown', '', "Download Excel")
+    
+    response = HttpResponse(buffer, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="rincian_pengeluaran.xlsx"'
+    return response
+
+@login_required
+def export_dead_stock(request):
+    days = request.GET.get('days', 90)
+    data = generate_dead_stock_report(days)
+    buffer = export_dead_stock_to_excel(data)
+    
+    log_activity(request, 'EXPORT_EXCEL', 'Report: Dead Stock', '', "Download Excel")
+    
+    response = HttpResponse(buffer, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="dead_stock_{days}_days.xlsx"'
+    return response
+
+@login_required
+def export_sales_report(request):
+    start = request.GET.get('start_date')
+    end = request.GET.get('end_date')
+    s = datetime.strptime(start, '%Y-%m-%d').date()
+    e = datetime.strptime(end, '%Y-%m-%d').date()
+    
+    data = generate_sales_report(s, e)
+    buffer = export_sales_report_to_excel(data)
+    
+    log_activity(request, 'EXPORT_EXCEL', 'Report: Sales', '', "Download Excel")
+    
+    response = HttpResponse(buffer, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="sales_report.xlsx"'
+    return response

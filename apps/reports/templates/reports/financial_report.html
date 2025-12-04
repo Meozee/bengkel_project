@@ -8,6 +8,7 @@
 
 <div class="card shadow-sm mb-4">
     <div class="card-body">
+        <!-- Ubah method jadi GET (Standar Laporan) -->
         <form method="get" action="{% url 'reports:financial_report' %}">
             <div class="row g-3 align-items-end">
                 <div class="col-md-4">
@@ -35,6 +36,7 @@
         <div class="table-responsive">
             <table class="table table-borderless">
                 <tbody>
+                    <!-- PENDAPATAN -->
                     <tr class="border-bottom">
                         <td colspan="2" class="fw-bold text-uppercase text-success">Pendapatan (Revenue)</td>
                     </tr>
@@ -43,6 +45,7 @@
                         <td class="text-end fw-bold text-success">Rp {{ report_data.total_income|intcomma }}</td>
                     </tr>
                     
+                    <!-- PENGELUARAN -->
                     <tr class="border-bottom">
                         <td colspan="2" class="fw-bold text-uppercase text-danger mt-4 pt-3">Beban & Pengeluaran</td>
                     </tr>
@@ -59,6 +62,7 @@
                         <td class="text-end fw-bold text-danger">Rp {{ report_data.total_expenses|intcomma }}</td>
                     </tr>
 
+                    <!-- LABA BERSIH -->
                     <tr class="border-top border-bottom border-3">
                         <td class="fw-bold fs-4 text-uppercase">Laba Bersih (Net Profit)</td>
                         <td class="text-end fw-bold fs-4 {% if report_data.net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">

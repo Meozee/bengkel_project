@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.db.models import Sum, Count, F, Q
+from django.db.models import Sum, Count, F, Q, Avg
 from django.db.models.functions import TruncDay, TruncMonth
 
 # Import models
@@ -43,19 +43,18 @@ def dashboard_view(request):
         start_date = None
         end_date = None
 
+    # Q Objects dasar untuk filter
     q_filter_transaksi = Q(created_at__date__range=(start_date, end_date)) if start_date else Q()
-    q_filter_expense = Q(date__range=(start_date, end_date)) if start_date else Q()
     q_filter_purchase = Q(order_date__date__range=(start_date, end_date)) if start_date else Q()
+    q_filter_expense = Q(payment_date__range=(start_date, end_date)) if start_date else Q()
 
     # --- 2. Perhitungan KPI ---
-    
-    # PERBAIKAN DI SINI: Ganti .PAID menjadi .COMPLETED
     total_pemasukan = Transaction.objects.filter(
         q_filter_transaksi, status=Transaction.StatusChoices.COMPLETED
     ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
 
     total_expense = Expense.objects.filter(
-        q_filter_expense
+        q_filter_expense, status=Expense.StatusChoices.PAID
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
     total_purchase = PurchaseOrder.objects.filter(
@@ -75,12 +74,11 @@ def dashboard_view(request):
         first_day_last_month = last_day_last_month.replace(day=1)
         
         q_filter_transaksi_lm = Q(created_at__date__range=(first_day_last_month, last_day_last_month))
-        q_filter_expense_lm = Q(date__range=(first_day_last_month, last_day_last_month))
+        q_filter_expense_lm = Q(payment_date__range=(first_day_last_month, last_day_last_month))
         q_filter_purchase_lm = Q(order_date__date__range=(first_day_last_month, last_day_last_month))
 
-        # PERBAIKAN DI SINI: Ganti .PAID menjadi .COMPLETED
         pemasukan_lm = Transaction.objects.filter(q_filter_transaksi_lm, status=Transaction.StatusChoices.COMPLETED).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
-        expense_lm = Expense.objects.filter(q_filter_expense_lm).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        expense_lm = Expense.objects.filter(q_filter_expense_lm, status=Expense.StatusChoices.PAID).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         purchase_lm = PurchaseOrder.objects.filter(q_filter_purchase_lm, status=PurchaseOrder.StatusChoices.COMPLETED).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
         
         laba_bersih_bulan_lalu = pemasukan_lm - (expense_lm + purchase_lm)
@@ -91,54 +89,26 @@ def dashboard_view(request):
             persentase_perubahan = 100
             
     # --- 3. Data Grafik Tren ---
-    
     tren_labels = []
     tren_pemasukan_data = []
     tren_pengeluaran_data = []
     
     if start_date:
         date_format = '%Y-%m-%d'
-        
-        # PERBAIKAN DI SINI: Ganti .PAID menjadi .COMPLETED dan transaction_date jadi created_at
-        pemasukan_harian = Transaction.objects.filter(
-            q_filter_transaksi, status=Transaction.StatusChoices.COMPLETED
-        ).annotate(
-            day=TruncDay('created_at')
-        ).values('day').annotate(
-            total=Sum('total_amount')
-        ).order_by('day')
-        
-        expense_harian = Expense.objects.filter(
-            q_filter_expense
-        ).annotate(
-            day=TruncDay('date')
-        ).values('day').annotate(
-            total=Sum('amount')
-        ).order_by('day')
-        
-        purchase_harian = PurchaseOrder.objects.filter(
-            q_filter_purchase, status=PurchaseOrder.StatusChoices.COMPLETED
-        ).annotate(
-            day=TruncDay('order_date')
-        ).values('day').annotate(
-            total=Sum('total_amount')
-        ).order_by('day')
+        pemasukan_harian = Transaction.objects.filter(q_filter_transaksi, status=Transaction.StatusChoices.COMPLETED).annotate(day=TruncDay('created_at')).values('day').annotate(total=Sum('total_amount')).order_by('day')
+        expense_harian = Expense.objects.filter(q_filter_expense, status=Expense.StatusChoices.PAID).annotate(day=TruncDay('payment_date')).values('day').annotate(total=Sum('amount')).order_by('day')
+        purchase_harian = PurchaseOrder.objects.filter(q_filter_purchase, status=PurchaseOrder.StatusChoices.COMPLETED).annotate(day=TruncDay('order_date')).values('day').annotate(total=Sum('total_amount')).order_by('day')
 
         pengeluaran_map = {}
-        for item in expense_harian:
-            day_str = item['day'].strftime(date_format)
-            pengeluaran_map[day_str] = item['total']
-        for item in purchase_harian:
-            day_str = item['day'].strftime(date_format)
-            pengeluaran_map[day_str] = pengeluaran_map.get(day_str, Decimal('0.00')) + item['total']
-            
+        for item in expense_harian: pengeluaran_map[item['day'].strftime(date_format)] = item['total']
+        for item in purchase_harian: 
+            key = item['day'].strftime(date_format)
+            pengeluaran_map[key] = pengeluaran_map.get(key, Decimal('0.00')) + item['total']
+        
         pemasukan_map = {}
-        for item in pemasukan_harian:
-            day_str = item['day'].strftime(date_format)
-            pemasukan_map[day_str] = item['total']
+        for item in pemasukan_harian: pemasukan_map[item['day'].strftime(date_format)] = item['total']
 
         all_days = sorted(list(set(pemasukan_map.keys()) | set(pengeluaran_map.keys())))
-        
         tren_labels = all_days
         tren_pemasukan_data = [float(pemasukan_map.get(day, 0)) for day in all_days]
         tren_pengeluaran_data = [float(pengeluaran_map.get(day, 0)) for day in all_days]
@@ -146,63 +116,60 @@ def dashboard_view(request):
     else:
         date_format = '%Y-%m'
         
-        # PERBAIKAN DI SINI: Ganti .PAID menjadi .COMPLETED dan transaction_date jadi created_at
+        # Tambahkan .exclude(created_at__isnull=True)
         pemasukan_bulanan = Transaction.objects.filter(
-            q_filter_transaksi, status=Transaction.StatusChoices.COMPLETED
-        ).annotate(
+            q_filter_transaksi, 
+            status=Transaction.StatusChoices.COMPLETED
+        ).exclude(created_at__isnull=True).annotate( # <-- SAFETY
             month=TruncMonth('created_at')
         ).values('month').annotate(
             total=Sum('total_amount')
         ).order_by('month')
 
+        # Tambahkan .exclude(payment_date__isnull=True)
         expense_bulanan = Expense.objects.filter(
-            q_filter_expense
-        ).annotate(
-            month=TruncMonth('date')
+            q_filter_expense, 
+            status=Expense.StatusChoices.PAID
+        ).exclude(payment_date__isnull=True).annotate( # <-- SAFETY (INI YANG BIKIN ERROR TADI)
+            month=TruncMonth('payment_date')
         ).values('month').annotate(
             total=Sum('amount')
         ).order_by('month')
 
+        # Tambahkan .exclude(order_date__isnull=True)
         purchase_bulanan = PurchaseOrder.objects.filter(
-            q_filter_purchase, status=PurchaseOrder.StatusChoices.COMPLETED
-        ).annotate(
+            q_filter_purchase, 
+            status=PurchaseOrder.StatusChoices.COMPLETED
+        ).exclude(order_date__isnull=True).annotate( # <-- SAFETY
             month=TruncMonth('order_date')
         ).values('month').annotate(
             total=Sum('total_amount')
         ).order_by('month')
 
         pengeluaran_map = {}
-        for item in expense_bulanan:
-            month_str = item['month'].strftime(date_format)
-            pengeluaran_map[month_str] = item['total']
-        for item in purchase_bulanan:
-            month_str = item['month'].strftime(date_format)
-            pengeluaran_map[month_str] = pengeluaran_map.get(month_str, Decimal('0.00')) + item['total']
+        for item in expense_bulanan: pengeluaran_map[item['month'].strftime(date_format)] = item['total']
+        for item in purchase_bulanan: 
+            key = item['month'].strftime(date_format)
+            pengeluaran_map[key] = pengeluaran_map.get(key, Decimal('0.00')) + item['total']
         
         pemasukan_map = {}
-        for item in pemasukan_bulanan:
-            month_str = item['month'].strftime(date_format)
-            pemasukan_map[month_str] = item['total']
+        for item in pemasukan_bulanan: pemasukan_map[item['month'].strftime(date_format)] = item['total']
 
         all_months = sorted(list(set(pemasukan_map.keys()) | set(pengeluaran_map.keys())))
-        
         tren_labels = all_months
         tren_pemasukan_data = [float(pemasukan_map.get(month, 0)) for month in all_months]
         tren_pengeluaran_data = [float(pengeluaran_map.get(month, 0)) for month in all_months]
 
 
-    # --- 4. Distribusi Kategori (Donut Charts) ---
-
+    # --- 4. Distribusi Kategori ---
     subtotal_item_expr = F('quantity') * F('unit_price') * (Decimal('1') - F('discount_percentage') / Decimal('100'))
     subtotal_service_expr = F('quantity') * F('unit_price') * (Decimal('1') - F('discount_percentage') / Decimal('100'))
 
-    # PERBAIKAN DI SINI: Ganti .PAID menjadi .COMPLETED
     total_pemasukan_barang = TransactionItem.objects.filter(
         transaction__status=Transaction.StatusChoices.COMPLETED,
         transaction__created_at__date__range=(start_date, end_date) if start_date else Q()
     ).aggregate(total=Sum(subtotal_item_expr))['total'] or Decimal('0.00')
 
-    # PERBAIKAN DI SINI: Ganti .PAID menjadi .COMPLETED
     total_pemasukan_jasa = TransactionService.objects.filter(
         transaction__status=Transaction.StatusChoices.COMPLETED,
         transaction__created_at__date__range=(start_date, end_date) if start_date else Q()
@@ -211,97 +178,87 @@ def dashboard_view(request):
     dist_pemasukan_labels = ['Penjualan Jasa', 'Penjualan Barang']
     dist_pemasukan_data = [float(total_pemasukan_jasa), float(total_pemasukan_barang)]
 
-    dist_expense = Expense.objects.filter(q_filter_expense).values('category__name').annotate(
-        total=Sum('amount')
-    ).order_by('-total')
+    dist_expense = Expense.objects.filter(
+        q_filter_expense, status=Expense.StatusChoices.PAID
+    ).values('category__name').annotate(total=Sum('amount')).order_by('-total')
     
-    dist_purchase = PurchaseOrder.objects.filter(q_filter_purchase, status=PurchaseOrder.StatusChoices.COMPLETED).values('vendor__name').annotate(
-        total=Sum('total_amount')
-    ).order_by('-total')
+    dist_purchase = PurchaseOrder.objects.filter(
+        q_filter_purchase, status=PurchaseOrder.StatusChoices.COMPLETED
+    ).values('vendor__name').annotate(total=Sum('total_amount')).order_by('-total')
     
-    dist_pengeluaran_labels = [item['category__name'] for item in dist_expense] + \
-                              [f"Vendor: {item['vendor__name']}" for item in dist_purchase]
-    dist_pengeluaran_data = [float(item['total']) for item in dist_expense] + \
-                            [float(item['total']) for item in dist_purchase]
+    dist_pengeluaran_labels = [item['category__name'] for item in dist_expense] + [f"Vendor: {item['vendor__name']}" for item in dist_purchase]
+    dist_pengeluaran_data = [float(item['total']) for item in dist_expense] + [float(item['total']) for item in dist_purchase]
 
 
     # --- 5. Top 5 Section ---
 
-    # PERBAIKAN DI SEMUA BAGIAN TOP 5: Ganti .PAID menjadi .COMPLETED
-    top_montir = Mechanic.objects.filter(
-        transaction__status=Transaction.StatusChoices.COMPLETED,
-        transaction__created_at__date__range=(start_date, end_date) if start_date else Q()
-    ).annotate(
-        total_transaksi=Count('transaction')
-    ).order_by('-total_transaksi')[:5]
+    # Filter Umum untuk Transaksi
+    top_filter = Q(transaction__status=Transaction.StatusChoices.COMPLETED)
+    if start_date:
+        top_filter &= Q(transaction__created_at__date__range=(start_date, end_date))
 
-    top_pelanggan = Customer.objects.filter(
-        transaction__status=Transaction.StatusChoices.COMPLETED,
-        transaction__created_at__date__range=(start_date, end_date) if start_date else Q()
-    ).annotate(
-        total_belanja=Sum('transaction__total_amount')
-    ).order_by('-total_belanja')[:5]
-
-    top_barang = InventoryItem.objects.filter(
-        transactionitem__transaction__status=Transaction.StatusChoices.COMPLETED,
-        transactionitem__transaction__created_at__date__range=(start_date, end_date) if start_date else Q()
-    ).annotate(
-        total_terjual=Sum('transactionitem__quantity')
-    ).order_by('-total_terjual')[:5]
-
-    top_service = Service.objects.filter(
-        transactionservice__transaction__status=Transaction.StatusChoices.COMPLETED,
-        transactionservice__transaction__created_at__date__range=(start_date, end_date) if start_date else Q()
-    ).annotate(
-        total_digunakan=Sum('transactionservice__quantity')
-    ).order_by('-total_digunakan')[:5]
+    # 1. Top Montir (Jumlah Job)
+    top_montir = Mechanic.objects.filter(top_filter).annotate(total_transaksi=Count('transaction')).order_by('-total_transaksi')[:5]
     
-    top_vendor = Vendor.objects.filter(
-        purchaseorder__status=PurchaseOrder.StatusChoices.COMPLETED,
-        purchaseorder__order_date__date__range=(start_date, end_date) if start_date else Q()
+    # 2. Top Montir (Kecepatan)
+    top_montir_speed = Mechanic.objects.filter(
+        top_filter, transaction__completed_at__isnull=False
     ).annotate(
+        avg_duration=Avg(F('transaction__completed_at') - F('transaction__created_at'))
+    ).order_by('avg_duration')[:5]
+
+    speed_labels = []
+    speed_data = []
+    for m in top_montir_speed:
+        if m.avg_duration:
+            minutes = m.avg_duration.total_seconds() / 60
+            speed_labels.append(m.name)
+            speed_data.append(round(minutes, 1))
+
+    # 3. Top Pelanggan
+    top_pelanggan = Customer.objects.filter(top_filter).annotate(total_belanja=Sum('transaction__total_amount')).order_by('-total_belanja')[:5]
+    
+    # 4. Top Barang
+    item_filter = Q(transactionitem__transaction__status=Transaction.StatusChoices.COMPLETED)
+    if start_date: item_filter &= Q(transactionitem__transaction__created_at__date__range=(start_date, end_date))
+    top_barang = InventoryItem.objects.filter(item_filter).annotate(total_terjual=Sum('transactionitem__quantity')).order_by('-total_terjual')[:5]
+
+    # 5. Top Service
+    svc_filter = Q(transactionservice__transaction__status=Transaction.StatusChoices.COMPLETED)
+    if start_date: svc_filter &= Q(transactionservice__transaction__created_at__date__range=(start_date, end_date))
+    top_service = Service.objects.filter(svc_filter).annotate(total_digunakan=Sum('transactionservice__quantity')).order_by('-total_digunakan')[:5]
+    
+    # 6. Top Vendor (PERBAIKAN ERROR DI SINI)
+    # Kita buat filter khusus untuk Vendor karena dia relasinya ke PurchaseOrder
+    vendor_filter = Q(purchaseorder__status=PurchaseOrder.StatusChoices.COMPLETED)
+    if start_date:
+        # Gunakan purchaseorder__order_date untuk filter vendor
+        vendor_filter &= Q(purchaseorder__order_date__date__range=(start_date, end_date))
+
+    top_vendor = Vendor.objects.filter(vendor_filter).annotate(
         total_pembelian=Sum('purchaseorder__total_amount')
     ).order_by('-total_pembelian')[:5]
     
+    # Bundle Data
     top_charts_data = {
-        'montir': {
-            'labels': [m.name for m in top_montir],
-            'data': [m.total_transaksi for m in top_montir],
-        },
-        'pelanggan': {
-            'labels': [p.name for p in top_pelanggan],
-            'data': [float(p.total_belanja) for p in top_pelanggan],
-        },
-        'barang': {
-            'labels': [b.name for b in top_barang],
-            'data': [b.total_terjual for b in top_barang],
-        },
-        'service': {
-            'labels': [s.name for s in top_service],
-            'data': [s.total_digunakan for s in top_service],
-        },
-        'vendor': {
-            'labels': [v.name for v in top_vendor],
-            'data': [float(v.total_pembelian) for v in top_vendor],
-        }
+        'montir': {'labels': [m.name for m in top_montir], 'data': [m.total_transaksi for m in top_montir]},
+        'montir_speed': {'labels': speed_labels, 'data': speed_data}, 
+        'pelanggan': {'labels': [p.name for p in top_pelanggan], 'data': [float(p.total_belanja) for p in top_pelanggan]},
+        'barang': {'labels': [b.name for b in top_barang], 'data': [b.total_terjual for b in top_barang]},
+        'service': {'labels': [s.name for s in top_service], 'data': [s.total_digunakan for s in top_service]},
+        'vendor': {'labels': [v.name for v in top_vendor], 'data': [float(v.total_pembelian) for v in top_vendor]}
     }
 
-    # --- 6. Insight Otomatis ---
+    # --- 6. Insight ---
     insight_text = ""
     try:
-        top_pemasukan_sumber = top_service.first()
-        top_pengeluaran_sumber = dist_expense.first()
-        
-        if top_pemasukan_sumber:
-            insight_text += f"Pemasukan tertinggi periode ini berasal dari '{top_pemasukan_sumber.name}'."
-        if top_pengeluaran_sumber:
-             insight_text += f" Pengeluaran operasional terbesar adalah untuk '{top_pengeluaran_sumber['category__name']}'."
-    except Exception:
-        insight_text = "Data belum cukup untuk menghasilkan insight."
+        top_income = top_service.first()
+        if top_income: insight_text += f"Pemasukan tertinggi dari '{top_income.name}'."
+        if speed_labels: insight_text += f" Montir tercepat periode ini adalah '{speed_labels[0]}'."
+    except:
+        insight_text = "Data belum cukup."
 
 
-    # --- 7. Kirim data ke Template ---
-    
     context = {
         'total_pemasukan': total_pemasukan,
         'total_pengeluaran': total_pengeluaran,
@@ -311,15 +268,12 @@ def dashboard_view(request):
         'tren_labels_json': json.dumps(tren_labels),
         'tren_pemasukan_data_json': json.dumps(tren_pemasukan_data),
         'tren_pengeluaran_data_json': json.dumps(tren_pengeluaran_data),
-        
         'dist_pemasukan_labels_json': json.dumps(dist_pemasukan_labels),
         'dist_pemasukan_data_json': json.dumps(dist_pemasukan_data),
-        
         'dist_pengeluaran_labels_json': json.dumps(dist_pengeluaran_labels),
         'dist_pengeluaran_data_json': json.dumps(dist_pengeluaran_data),
         
         'top_charts_data_json': json.dumps(top_charts_data),
-        
         'insight_text': insight_text,
         
         'current_periode': periode,

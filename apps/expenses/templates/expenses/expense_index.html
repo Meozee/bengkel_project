@@ -1,49 +1,78 @@
 {% extends "base.html" %}
 {% load humanize %}
 
+{% block title %}{{ page_title }}{% endblock %}
+
 {% block content %}
 <div class="container-fluid px-4">
     
     <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
-        <h1>{{ page_title }}</h1>
+        <h1><i class="bi bi-wallet2"></i> {{ page_title }}</h1>
+        
+        <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button" id="addDataDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-plus-circle me-1"></i> Tambah Data
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'expenses:expense_create' %}">Input Manual</a></li>
+                <li><a class="dropdown-item" href="{% url 'expenses:recurring_create' %}">Buat Jadwal Rutin</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'expenses:category_create' %}">Tambah Kategori</a></li>
+            </ul>
+        </div>
     </div>
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
-            <i class="bi bi-funnel"></i> Filter Pengeluaran
+    {% if unpaid_recurring %}
+    <div class="card border-warning mb-4 shadow-sm">
+        <div class="card-header bg-warning text-dark fw-bold">
+            <i class="bi bi-alarm-fill me-2"></i> Peringatan: Tagihan Rutin Belum Dibuat
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <tbody>
+                    {% for item in unpaid_recurring %}
+                    <tr class="align-middle">
+                        <td class="ps-4"><strong>{{ item.name }}</strong></td>
+                        <td>Tgl <strong>{{ item.due_date_day }}</strong></td>
+                        <td>Rp {{ item.amount|intcomma }}</td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'expenses:pay_recurring' item.pk %}" class="btn btn-success btn-sm">Proses</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body py-3">
             <form method="get">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label small text-muted">Cari (Deskripsi/User)</label>
-                        <input type="text" name="q" class="form-control" value="{{ current_query }}" placeholder="Contoh: Listrik, Budi...">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                            <input type="text" name="q" class="form-control" value="{{ current_query }}" placeholder="Cari...">
+                        </div>
                     </div>
-                    
-                    <div class="col-md-2">
-                        <label class="form-label small text-muted">Kategori</label>
+                    <div class="col-md-3">
                         <select name="category" class="form-select">
                             <option value="">Semua Kategori</option>
                             {% for cat in categories %}
-                            <option value="{{ cat.pk }}" {% if current_category == cat.pk %}selected{% endif %}>
-                                {{ cat.name }}
-                            </option>
+                            <option value="{{ cat.pk }}" {% if current_category == cat.pk %}selected{% endif %}>{{ cat.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label small text-muted">Dari Tanggal</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ current_start }}">
+                    <div class="col-md-3">
+                        <div class="input-group">
+                            <input type="date" name="start_date" class="form-control" value="{{ current_start }}">
+                            <span class="input-group-text">-</span>
+                            <input type="date" name="end_date" class="form-control" value="{{ current_end }}">
+                        </div>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small text-muted">Sampai Tanggal</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ current_end }}">
-                    </div>
-
-                    <div class="col-md-3 d-flex gap-2">
-                        <button type="submit" class="btn btn-info text-white w-100"><i class="bi bi-search"></i> Cari</button>
-                        <a href="{% url 'expenses:expense_index' %}" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle"></i> Reset</a>
+                        <button type="submit" class="btn btn-dark w-100">Filter</button>
                     </div>
                 </div>
             </form>
@@ -52,111 +81,167 @@
 
     <ul class="nav nav-tabs" id="expenseTab" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expenses-tab-pane" type="button" role="tab">
-                <i class="bi bi-cash-stack me-1"></i> Daftar Pengeluaran
+            <button class="nav-link active fw-bold text-danger" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-tab-pane" type="button">
+                <i class="bi bi-hourglass-split"></i> Tagihan (Pending)
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="categories-tab" data-bs-toggle="tab" data-bs-target="#categories-tab-pane" type="button" role="tab">
-                <i class="bi bi-tags-fill me-1"></i> Kategori
+            <button class="nav-link text-success" id="paid-tab" data-bs-toggle="tab" data-bs-target="#paid-tab-pane" type="button">
+                <i class="bi bi-check2-all"></i> Riwayat (Lunas)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-primary" id="recurring-tab" data-bs-toggle="tab" data-bs-target="#recurring-tab-pane" type="button">
+                <i class="bi bi-calendar-week"></i> Jadwal Rutin
             </button>
         </li>
     </ul>
 
-    <div class="tab-content" id="expenseTabContent">
+    <div class="tab-content border border-top-0 bg-white shadow-sm p-3 mb-5">
         
-        <div class="tab-pane fade show active" id="expenses-tab-pane" role="tabpanel" aria-labelledby="expenses-tab" tabindex="0">
-            <div class="card mt-3 shadow-sm">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <div class="fw-bold text-primary">Data Pengeluaran Operasional</div>
-                    <a href="{% url 'expenses:expense_create' %}" class="btn btn-primary btn-sm">
-                        <i class="bi bi-plus-circle me-1"></i> Tambah Pengeluaran
-                    </a>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Kategori</th>
-                                    <th>Jumlah</th>
-                                    <th>Deskripsi</th>
-                                    <th>Dicatat Oleh</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for expense in expenses %}
-                                <tr>
-                                    <td>{{ expense.date|date:"d M Y" }}</td>
-                                    <td><span class="badge bg-secondary">{{ expense.category.name }}</span></td>
-                                    <td class="fw-bold text-danger">Rp {{ expense.amount|intcomma }}</td>
-                                    <td>{{ expense.description|truncatewords:8 }}</td>
-                                    <td><small class="text-muted">{{ expense.user.username|default:"-" }}</small></td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{% url 'expenses:expense_update' expense.pk %}" class="btn btn-outline-primary" title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <a href="{% url 'expenses:expense_delete' expense.pk %}" class="btn btn-outline-danger" title="Hapus">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr><td colspan="6" class="text-center py-4 text-muted">Belum ada data pengeluaran yang sesuai filter.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+        <div class="tab-pane fade show active" id="pending-tab-pane" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Jatuh Tempo</th>
+                            <th>Keterangan</th>
+                            <th>Kategori</th>
+                            <th>Nominal</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in pending_expenses %}
+                        <tr>
+                            <td>{{ item.due_date|date:"d M Y" }}</td>
+                            <td>
+                                <a href="{% url 'expenses:expense_detail' item.pk %}" class="fw-bold text-decoration-none text-dark">
+                                    {{ item.title }}
+                                </a>
+                                <div class="small text-muted">{{ item.description|truncatewords:5 }}</div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ item.category.name }}</span></td>
+                            <td class="fw-bold">Rp {{ item.amount|intcomma }}</td>
+                            <td class="text-center"><span class="badge bg-warning text-dark">Belum Dibayar</span></td>
+                            <td class="text-end">
+                                <a href="{% url 'expenses:pay_expense' item.pk %}" class="btn btn-success btn-sm">Bayar</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center py-5 text-muted">Tidak ada tagihan.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="tab-pane fade" id="categories-tab-pane" role="tabpanel" aria-labelledby="categories-tab" tabindex="0">
-            <div class="card mt-3 shadow-sm">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <div class="fw-bold text-primary">Master Kategori</div>
-                    <a href="{% url 'expenses:category_create' %}" class="btn btn-primary btn-sm">
-                        <i class="bi bi-plus-circle me-1"></i> Tambah Kategori
-                    </a>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle w-100">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Nama Kategori</th>
-                                    <th style="width: 150px;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for category in categories %}
-                                <tr>
-                                    <td>{{ category.name }}</td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{% url 'expenses:category_update' category.pk %}" class="btn btn-outline-primary">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <a href="{% url 'expenses:category_delete' category.pk %}" class="btn btn-outline-danger">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr><td colspan="2" class="text-center py-4 text-muted">Belum ada kategori.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+        <div class="tab-pane fade" id="paid-tab-pane" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Tgl Bayar</th>
+                            <th>Keterangan</th>
+                            <th>Kategori</th>
+                            <th>Nominal</th>
+                            <th>User</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in paid_expenses %}
+                        <tr>
+                            <td>{{ item.payment_date|date:"d M Y" }}</td>
+                            <td>
+                                <a href="{% url 'expenses:expense_detail' item.pk %}" class="fw-bold text-decoration-none text-dark">
+                                    {{ item.title }}
+                                </a>
+                                <div class="small text-muted">{{ item.description|truncatewords:5 }}</div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ item.category.name }}</span></td>
+                            <td class="fw-bold text-success">Rp {{ item.amount|intcomma }}</td>
+                            <td>{{ item.user.username|default:"System" }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'expenses:expense_update' item.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center py-5 text-muted">Belum ada riwayat.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
-        
+
+        <div class="tab-pane fade" id="recurring-tab-pane" role="tabpanel">
+             <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nama Tagihan</th>
+                            <th>Jadwal</th>
+                            <th>Estimasi</th>
+                            <th>Status</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in recurring_expenses %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.name }}</strong>
+                                <div class="small">{{ item.category.name }}</div>
+                            </td>
+                            <td>Setiap tgl {{ item.due_date_day }}</td>
+                            <td>Rp {{ item.amount|intcomma }}</td>
+                            <td>
+                                {% if item.is_active %}
+                                    <span class="badge bg-success">Aktif</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Non-Aktif</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'expenses:toggle_recurring' item.pk %}" class="btn btn-sm btn-outline-warning"><i class="bi bi-power"></i></a>
+                                <a href="{% url 'expenses:recurring_update' item.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // SCRIPT AGAR TAB TIDAK RESET SAAT RELOAD/FILTER
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Ambil tab terakhir dari localStorage
+        var activeTab = localStorage.getItem('activeExpenseTab');
+        
+        if (activeTab) {
+            // Cari tombol tab yang sesuai ID-nya
+            var tabToActivate = document.querySelector('#' + activeTab);
+            // Jika ada, klik tombol tersebut (Bootstrap akan handle sisanya)
+            if (tabToActivate) {
+                var tabInstance = new bootstrap.Tab(tabToActivate);
+                tabInstance.show();
+            }
+        }
+
+        // 2. Simpan ke localStorage setiap kali user klik tab
+        var tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabEls.forEach(function(tabEl) {
+            tabEl.addEventListener('shown.bs.tab', function (event) {
+                localStorage.setItem('activeExpenseTab', event.target.id);
+            });
+        });
+    });
+</script>
 {% endblock %}
