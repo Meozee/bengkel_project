@@ -1,0 +1,353 @@
+/* ============================================
+   Dashboard Styles - Bengkel Management System
+   ============================================ */
+
+/* === Container & Layout === */
+.container-fluid {
+    max-width: 1400px;
+}
+
+/* === Cards Enhancement === */
+.card {
+    border: none;
+    border-radius: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card-header {
+    border-radius: 12px 12px 0 0 !important;
+    border-bottom: 1px solid #e3e6f0;
+    padding: 1rem 1.25rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* === Statistics Cards === */
+.border-start {
+    border-left-width: 5px !important;
+}
+
+.card.border-start {
+    overflow: hidden;
+    position: relative;
+}
+
+.card.border-start::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: linear-gradient(180deg, currentColor 0%, transparent 100%);
+    opacity: 0.6;
+}
+
+.card.border-success::before {
+    color: #1cc88a;
+}
+
+.card.border-danger::before {
+    color: #e74a3b;
+}
+
+.card.border-info::before {
+    color: #36b9cc;
+}
+
+.card.border-primary::before {
+    color: #4e73df;
+}
+
+.card.border-warning::before {
+    color: #f6c23e;
+}
+
+/* === Typography === */
+.text-xs {
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.font-weight-bold {
+    font-weight: 700 !important;
+}
+
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+
+.text-gray-300 {
+    color: #dddfeb !important;
+}
+
+h1.h3 {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+h4.h4 {
+    font-weight: 600;
+    color: #2c3e50;
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+h4.h4::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, #4e73df, #36b9cc);
+    border-radius: 2px;
+}
+
+/* === Filter Form === */
+.card-body form {
+    background: transparent;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #5a5c69;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.form-select,
+.form-control {
+    border: 1px solid #d1d3e2;
+    border-radius: 8px;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.form-select:focus,
+.form-control:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.15);
+}
+
+.form-select:disabled,
+.form-control:disabled {
+    background-color: #f8f9fc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* === Buttons === */
+.btn {
+    border-radius: 8px;
+    padding: 0.625rem 1.25rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    border: none;
+    box-shadow: 0 2px 4px rgba(78, 115, 223, 0.3);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #224abe 0%, #1a3a9e 100%);
+    box-shadow: 0 4px 8px rgba(78, 115, 223, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn i {
+    margin-right: 0.5rem;
+}
+
+/* === Alert Insight === */
+.alert-info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    border: 1px solid #b8daff;
+    border-left: 4px solid #36b9cc;
+    border-radius: 10px;
+    color: #0c5460;
+}
+
+.alert-info i {
+    font-size: 1.25rem;
+    vertical-align: middle;
+}
+
+/* === Chart Containers === */
+.chart-area,
+.chart-pie {
+    position: relative;
+}
+
+canvas {
+    max-height: 100%;
+}
+
+/* === Statistics Icons === */
+.col-auto i {
+    opacity: 0.15;
+    font-size: 3rem !important;
+}
+
+/* === Card Hover Effects === */
+.card.shadow:hover {
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.12) !important;
+}
+
+/* === Responsive Stats Cards === */
+@media (max-width: 768px) {
+    .col-xl-3,
+    .col-md-6 {
+        margin-bottom: 1rem;
+    }
+    
+    .h5 {
+        font-size: 1.1rem !important;
+    }
+    
+    .text-xs {
+        font-size: 0.7rem;
+    }
+}
+
+/* === Chart Card Headers === */
+.card-header h6 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #4e73df;
+    margin: 0;
+}
+
+.card-header small {
+    font-size: 0.75rem;
+}
+
+/* === Grid Spacing === */
+.row {
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+}
+
+.row > [class*='col-'] {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+/* === Shadow Utilities === */
+.shadow-sm {
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.075) !important;
+}
+
+.shadow {
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.1) !important;
+}
+
+/* === Background Colors === */
+.bg-white {
+    background-color: #fff !important;
+}
+
+/* === Spacing Utilities === */
+.py-4 {
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+}
+
+.mb-4 {
+    margin-bottom: 1.5rem !important;
+}
+
+.mb-3 {
+    margin-bottom: 1rem !important;
+}
+
+/* === Loading State === */
+.card.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.card.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #4e73df;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* === Print Styles === */
+@media print {
+    .btn,
+    .card-header form {
+        display: none !important;
+    }
+    
+    .card {
+        break-inside: avoid;
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+}
+
+/* === Dark Mode Support (Optional) === */
+@media (prefers-color-scheme: dark) {
+    body.dark-mode .card {
+        background-color: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    body.dark-mode .text-gray-800 {
+        color: #e2e8f0 !important;
+    }
+    
+    body.dark-mode .form-select,
+    body.dark-mode .form-control {
+        background-color: #1a202c;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+}
+
+/* === Smooth Scroll === */
+html {
+    scroll-behavior: smooth;
+}
+
+/* === Custom Scrollbar === */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #4e73df;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #224abe;
+}
