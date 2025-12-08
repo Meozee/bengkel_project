@@ -12,21 +12,32 @@
                 {% endif %}
             </tr>
         </thead>
+        
         <tbody>
             {% for log in logs %}
-            <tr>
-                <td class="ps-3"><small>{{ log.timestamp|date:"d M Y, H:i" }}</small></td>
-                <td class="fw-bold text-primary">{{ log.user.username|default:"System" }}</td>
-                <td>
+            <tr style="border-bottom: 1px solid #dee2e6;">
+                
+                <td class="ps-3" style="vertical-align: middle; color: #212529 !important;">
+                    <small style="color: #6c757d !important;">{{ log.timestamp|date:"d M Y, H:i" }}</small>
+                </td>
+                
+                <td style="vertical-align: middle; color: #212529 !important;">
+                    <span class="fw-bold" style="color: #212529 !important;">
+                        {{ log.user.username|default:"System" }}
+                    </span>
+                </td>
+                
+                <td style="vertical-align: middle; color: #212529 !important;">
                     {% if log.user.role == 'OWNER' %}
-                        <span class="badge bg-primary" style="font-size: 0.7rem;">Owner</span>
+                        <span class="badge bg-primary">Owner</span>
                     {% elif log.user.role == 'ADMIN' %}
-                        <span class="badge bg-secondary" style="font-size: 0.7rem;">Admin</span>
+                        <span class="badge bg-info text-dark">Admin</span>
                     {% else %}
-                        <span class="badge bg-light text-dark border">-</span>
+                        <span class="badge bg-secondary">-</span>
                     {% endif %}
                 </td>
-                <td>
+                
+                <td style="vertical-align: middle; color: #212529 !important;">
                     {% if log.action_type == 'LOGIN' %}
                         <span class="badge bg-success">LOGIN</span>
                     {% elif log.action_type == 'LOGOUT' %}
@@ -34,23 +45,28 @@
                     {% elif log.action_type == 'DELETE' %}
                         <span class="badge bg-danger">DELETE</span>
                     {% elif log.action_type == 'CREATE' %}
-                        <span class="badge bg-info text-dark">CREATE</span>
+                        <span class="badge bg-primary">CREATE</span>
                     {% elif log.action_type == 'UPDATE' %}
                         <span class="badge bg-warning text-dark">UPDATE</span>
                     {% else %}
                         <span class="badge bg-light text-dark border">{{ log.action_type }}</span>
                     {% endif %}
                 </td>
-                <td><span class="fw-bold">{{ log.target_model }}</span> <small class="text-muted">#{{ log.target_id }}</small></td>
+                
+                <td style="vertical-align: middle; color: #212529 !important;">
+                    <span class="fw-bold" style="color: #212529 !important;">{{ log.target_model }}</span> 
+                    <small style="color: #6c757d !important;">#{{ log.target_id }}</small>
+                </td>
+                
                 {% if show_detail %}
-                <td class="text-muted small text-truncate" style="max-width: 300px;" title="{{ log.details }}">
+                <td class="small text-truncate" style="max-width: 300px; vertical-align: middle; color: #6c757d !important;" title="{{ log.details }}">
                     {{ log.details }}
                 </td>
                 {% endif %}
             </tr>
             {% empty %}
             <tr>
-                <td colspan="{% if show_detail %}6{% else %}5{% endif %}" class="text-center py-5 text-muted">
+                <td colspan="{% if show_detail %}6{% else %}5{% endif %}" class="text-center py-5" style="color: #6c757d !important;">
                     <i class="bi bi-search display-6 d-block mb-2"></i>
                     Tidak ada aktivitas ditemukan untuk kriteria filter ini.
                 </td>
@@ -58,4 +74,4 @@
             {% endfor %}
         </tbody>
     </table>
-</div>
+</div;lp
