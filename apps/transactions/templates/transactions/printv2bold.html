@@ -20,31 +20,39 @@
         body {
             width: 45mm;     
             margin: 0 auto;
-            padding: 5px 0;
+            padding: 2px 0;
             
-            /* KEMBALI KE FONT STANDARD YANG RAPI */
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 10px; /* Ukuran standar struk */
-            font-weight: normal; /* TIDAK BOLD SEMUA */
-            line-height: 1.2; 
+            /* PERUBAHAN UTAMA DI SINI: */
+            /* 1. Ganti font ke sans-serif (Arial/Tahoma) karena lebih tegas daripada Courier */
+            /* 2. Atau tetap monospace tapi dipaksa BOLD */
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace; 
+            font-size: 11px; /* Naikkan dikit jadi 11px biar jelas */
+            font-weight: 900; /* SUPER TEBAL (Bold) */
+            line-height: 1.1; 
             
             background-color: #fff;
-            color: #000;
+            color: #000 !important; /* Paksa Hitam Pekat */
+        }
+
+        /* Trik Mempertajam Teks untuk Thermal */
+        body {
+            -webkit-font-smoothing: none; /* Matikan penghalusan font */
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeSpeed;
         }
 
         /* --- UTILITY CLASSES --- */
         .text-center { text-align: center; }
         .text-right { text-align: right; }
-        .text-bold { font-weight: bold; } /* Class khusus untuk yang mau ditebalkan */
         
         .divider {
-            border-top: 1px dashed #000; /* Garis kembali normal (1px) */
+            border-top: 2px dashed #000; /* Garis dipertebal jadi 2px */
             margin: 5px 0;
             width: 100%;
         }
 
         .divider-solid {
-            border-top: 1px solid #000;
+            border-top: 2px solid #000; /* Garis dipertebal */
             margin: 5px 0;
             width: 100%;
         }
@@ -55,21 +63,24 @@
             width: 100%;
         }
 
+        .col { flex: 1; }
+        
         .item-name {
             display: block;
             margin-bottom: 2px;
-            font-weight: bold; /* Nama barang tetap bold biar jelas */
+            font-weight: 900; /* Pastikan nama barang tebal */
             font-size: 11px;
-            /* text-transform: uppercase; <--- Opsional: Hapus komentar ini kalau mau huruf besar semua */
+            text-transform: uppercase; /* Huruf besar semua biar lebih jelas */
         }
 
         .qty-price {
-            font-size: 10px;
+            font-size: 10px; /* Harga rincian boleh agak kecil */
+            font-weight: bold;
         }
 
-        .total-section {
-            font-size: 12px;
-            font-weight: bold;
+        .total-row {
+            font-size: 13px;
+            font-weight: 900;
             margin-top: 5px;
             border-top: 1px solid #000;
             padding-top: 2px;
@@ -83,6 +94,7 @@
             padding: 10px;
             font-size: 12px;
             border-bottom: 1px solid #ccc;
+            font-weight: normal;
         }
 
         @media print {
@@ -94,11 +106,11 @@
 <body>
 
     <div class="no-print">
-        <button onclick="window.print()" style="padding:5px 10px; cursor:pointer;">🖨️ PRINT</button>
+        <button onclick="window.print()" style="padding:5px 10px; cursor:pointer;">🖨️ PRINT ULANG</button>
     </div>
 
     <div class="text-center">
-        <div style="font-size: 12px; font-weight: bold;">{{ shop_name }}</div>
+        <div style="font-size: 14px; font-weight: 900;">{{ shop_name }}</div>
         <div style="font-size: 10px;">{{ shop_address }}</div>
         <div style="font-size: 10px;">{{ shop_phone }}</div>
     </div>
@@ -107,16 +119,20 @@
 
     <div style="font-size: 10px;">
         <div class="row">
-            <span>No:</span>
+            <span>NO:</span>
             <span>{{ transaction.invoice_number }}</span>
         </div>
         <div class="row">
-            <span>Tgl:</span>
+            <span>TGL:</span>
             <span>{{ transaction.created_at|date:"d/m/y H:i" }}</span>
         </div>
         <div class="row">
-            <span>Mek:</span>
-            <span>{{ transaction.mechanic.name|default:"-"|truncatechars:15 }}</span>
+            <span>MEK:</span>
+            <span>{{ transaction.mechanic.name|default:"-"|truncatechars:15|upper }}</span>
+        </div>
+        <div class="row">
+            <span>PLG:</span>
+            <span>{{ transaction.customer.name|default:"Umum"|truncatechars:15|upper }}</span>
         </div>
     </div>
 
@@ -126,7 +142,7 @@
     <div style="margin-bottom: 5px;">
         <div class="item-name">{{ item.item.name }}</div>
         <div class="row qty-price">
-            <span>{{ item.quantity }} x {{ item.unit_price|floatformat:0 }}</span>
+            <span>{{ item.quantity }}x {{ item.unit_price|floatformat:0 }}</span>
             <span>{{ item.subtotal|floatformat:0 }}</span>
         </div>
         {% if item.discount_amount > 0 %}
@@ -142,7 +158,7 @@
     <div style="margin-bottom: 5px;">
         <div class="item-name">{{ svc.service.name }}</div>
         <div class="row qty-price">
-            <span>{{ svc.quantity }} x {{ svc.unit_price|floatformat:0 }}</span>
+            <span>{{ svc.quantity }}x {{ svc.unit_price|floatformat:0 }}</span>
             <span>{{ svc.subtotal|floatformat:0 }}</span>
         </div>
     </div>
@@ -153,19 +169,19 @@
     <div>
         {% if transaction.discount_amount > 0 %}
         <div class="row" style="font-size: 10px;">
-            <span>Diskon</span>
+            <span>DISKON</span>
             <span>-{{ transaction.discount_amount|floatformat:0 }}</span>
         </div>
         {% endif %}
         
         {% if transaction.other_charges > 0 %}
         <div class="row" style="font-size: 10px;">
-            <span>Lain-lain</span>
+            <span>LAIN-LAIN</span>
             <span>{{ transaction.other_charges|floatformat:0 }}</span>
         </div>
         {% endif %}
 
-        <div class="row total-section">
+        <div class="row total-row">
             <span>TOTAL</span>
             <span>Rp {{ transaction.total_amount|floatformat:0 }}</span>
         </div>
@@ -174,9 +190,10 @@
     <div class="divider"></div>
 
     <div class="text-center" style="margin-top: 5px; font-size: 10px;">
-        Terima Kasih<br>
-        Barang yg dibeli tdk dpt ditukar<br>
-        <br>.
+        TERIMA KASIH<br>
+        BARANG YG DIBELI TDK DPT DITUKAR<br>
+        <br>
+        .
     </div>
 
     <script>

@@ -13,12 +13,11 @@
             </a>
             
             {% if transaction.status == 'COMPLETED' %}
-            <a href="{% url 'transactions:transaction_print_direct' transaction.pk %}" class="btn btn-dark">
-                <i class="bi bi-printer-fill me-1"></i> Cetak USB
-            </a>
-            <a href="#" onclick="window.open('{% url 'transactions:transaction_print' transaction.pk %}', '_blank', 'width=400,height=600')" class="btn btn-outline-secondary">
-                <i class="bi bi-file-earmark-pdf me-1"></i> Preview
-            </a>
+                <a href="#" 
+                   onclick="window.open('{% url 'transactions:transaction_print' transaction.pk %}', 'StrukPopup', 'width=300,height=600,scrollbars=yes,status=no,location=no'); return false;" 
+                   class="btn btn-dark">
+                    <i class="bi bi-printer-fill me-1"></i> Cetak Struk
+                </a>
             {% endif %}
             
             {% if transaction.status != 'CANCELLED' %}
