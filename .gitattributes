@@ -1,0 +1,6 @@
+# Pastikan semua file text menggunakan LF saat dicommit
+* text=auto eol=lf
+
+# Pastikan file shell script dan python selalu LF
+*.sh text eol=lf
+*.py text eol=lf
