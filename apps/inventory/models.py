@@ -6,6 +6,14 @@ from django.db import models
 class Category(models.Model):
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True)
+    
+    # Field konfigurasi untuk menentukan spek apa saja yang muncul di form
+    # Contoh isi: "Volume, SAE" atau "Ukuran, Ring"
+    required_specs = models.CharField(
+        max_length=500, 
+        blank=True, 
+        help_text="Masukkan nama spesifikasi dipisahkan koma. Contoh: Volume, SAE, Type"
+    )
 
     class Meta:
         verbose_name_plural = "Categories"
@@ -31,9 +39,12 @@ class InventoryItem(models.Model):
 
     quantity = models.PositiveIntegerField(default=0)
     reorder_threshold = models.PositiveIntegerField(default=10, help_text="Batas minimum stok sebelum notifikasi")
+    
+    # Field JSON ini akan menyimpan nilai inputan dinamis (misal: {"Volume": "1L"})
+    extra_specs = models.JSONField(default=dict, blank=True, help_text="Data dinamis (JSON)")
 
     def __str__(self):
-        return f"{self.name} (Stok: {self.quantity})"
+        return f"{self.name} ({self.sku})"
 
     @property
     def is_low_stock(self):

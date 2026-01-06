@@ -18,4 +18,6 @@ urlpatterns = [
     path('categories/add/', views.category_form, name='category_add'),
     path('categories/<int:pk>/edit/', views.category_form, name='category_update'),
     path('categories/<int:pk>/delete/', views.category_delete, name='category_delete'),
+    # --- TAMBAHAN BARU: API APIAN SEDERHANA ---
+    path('api/get-category-specs/<int:category_id>/', views.get_category_specs, name='get_category_specs'),
 ]

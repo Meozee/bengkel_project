@@ -4,6 +4,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.db.models import Q, F
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse 
 
 # Import Security & Logging Custom kita
 from apps.accounts.decorators import owner_required
@@ -13,6 +14,27 @@ from .models import InventoryItem, Category
 from .forms import CategoryForm, InventoryForm
 
 # ==============================
+# API VIEWS (Untuk JavaScript)
+# ==============================
+
+@login_required
+def get_category_specs(request, category_id):
+    """
+    API untuk mengambil daftar spesifikasi kategori.
+    Digunakan oleh JavaScript di form inventory.
+    """
+    category = get_object_or_404(Category, id=category_id)
+    
+    if category.required_specs:
+        # Pecah string "Volume, SAE" menjadi list ['Volume', 'SAE']
+        # Gunakan strip() untuk menghapus spasi berlebih
+        specs_list = [s.strip() for s in category.required_specs.split(',') if s.strip()]
+    else:
+        specs_list = []
+    
+    return JsonResponse({'specs': specs_list})
+
+# ==============================
 # INVENTORY ITEM VIEWS
 # ==============================
 
@@ -20,15 +42,24 @@ from .forms import CategoryForm, InventoryForm
 def inventory_list(request):
     items = InventoryItem.objects.select_related('category').all()
     categories = Category.objects.all()
+    selected_category_obj = None
 
+    # 1. Filter Pencarian Teks
     query = request.GET.get('q')
     if query:
         items = items.filter(
             Q(name__icontains=query) | Q(sku__icontains=query)
         )
+
+    # 2. Filter Kategori (Dirapikan)
     category_id = request.GET.get('category')
     if category_id:
+        # Filter items berdasarkan kategori
         items = items.filter(category_id=category_id)
+        # Ambil objek kategori untuk keperluan tampilan tabel dinamis
+        selected_category_obj = Category.objects.filter(id=category_id).first()
+
+    # 3. Filter Status Stok
     stock_status = request.GET.get('stock_status')
     if stock_status == 'low':
         items = items.filter(quantity__lte=F('reorder_threshold'))
@@ -37,7 +68,8 @@ def inventory_list(request):
         'items': items,
         'categories': categories,
         'current_query': query or '',
-        'current_category': int(category_id) if category_id else '',
+        'current_category': int(category_id) if category_id and category_id.isdigit() else '',
+        'selected_category_obj': selected_category_obj,
         'current_stock_status': stock_status or '',
     }
     return render(request, 'inventory/inventory_list.html', context)
@@ -104,11 +136,10 @@ def inventory_update(request, pk):
     })
 
 
-@owner_required # <--- HANYA OWNER YANG BISA HAPUS
+@owner_required 
 def inventory_delete(request, pk):
     item = get_object_or_404(InventoryItem, pk=pk)
     if request.method == 'POST':
-        # Simpan nama dulu untuk log sebelum object hilang
         item_name = item.name
         item_pk = item.pk
         
@@ -142,11 +173,11 @@ def category_form(request, pk=None):
     if pk:
         instance = get_object_or_404(Category, pk=pk)
         title = "Edit Kategori"
-        action_type = 'UPDATE' # Penanda untuk log
+        action_type = 'UPDATE'
     else:
         instance = None
         title = "Tambah Kategori"
-        action_type = 'CREATE' # Penanda untuk log
+        action_type = 'CREATE'
 
     if request.method == 'POST':
         form = CategoryForm(request.POST, instance=instance)
@@ -170,7 +201,7 @@ def category_form(request, pk=None):
     return render(request, 'inventory/category_form.html', {'form': form, 'title': title})
 
 
-@owner_required # <--- HANYA OWNER YANG BISA HAPUS
+@owner_required
 def category_delete(request, pk):
     category = get_object_or_404(Category, pk=pk)
     if request.method == 'POST':

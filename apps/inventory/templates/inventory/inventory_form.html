@@ -1,13 +1,12 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
-{% load humanize %} {# Pastikan load humanize untuk format angka (intcomma) #}
+{% load humanize %}
 
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4">
     <h1 class="mt-4">{{ title }}</h1>
-
 
     <div class="row">
         <div class="col-lg-8">
@@ -16,35 +15,31 @@
                     <i class="fas fa-edit"></i> Detail Item
                 </div>
                 <div class="card-body">
-                    
-                    <form method="POST">
+                    <form method="POST" id="inventoryForm">
                         {% csrf_token %}
 
                         {% if form.instance.pk %}
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">Stok Saat Ini (Otomatis)</label>
+                                    <label class="form-label fw-bold">Stok Saat Ini</label>
                                     <input type="text" class="form-control" value="{{ form.instance.quantity }}" readonly disabled>
-                                    <div class="form-text">Stok hanya bisa diubah via PO atau Transaksi.</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">Harga Modal Rata-rata (Otomatis)</label>
+                                    <label class="form-label fw-bold">Harga Modal (Avg)</label>
                                     <input type="text" class="form-control" value="Rp {{ form.instance.buy_price|intcomma }}" readonly disabled>
-                                    <div class="form-text">Harga modal dihitung otomatis via PO (WAC).</div>
                                 </div>
                             </div>
                             <hr>
                         {% endif %}
                         
                         {% crispy form %}
-                        
-                        <hr>
-                        <div class="d-flex justify-content-between">
+
+                        <div class="d-flex justify-content-between mt-3">
                             <a href="{% url 'inventory:inventory_list' %}" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> Batal
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Simpan Perubahan
+                                <i class="fas fa-save"></i> Simpan
                             </button>
                         </div>
                     </form>
@@ -54,20 +49,93 @@
         
         {% if not form.instance.pk %}
         <div class="col-lg-4">
-            <div class="alert alert-info" role="alert">
+            <div class="alert alert-info">
                 <h4 class="alert-heading"><i class="fas fa-info-circle"></i> Catatan</h4>
-                <p>
-                    Anda sedang menambahkan item baru.
-                </p>
+                <p>Spesifikasi item akan muncul otomatis berdasarkan Kategori yang dipilih.</p>
                 <hr>
-                <p class="mb-0">
-                    <strong>Stok Awal</strong> dan <strong>Harga Modal Awal</strong> akan otomatis diatur ke <strong>0</strong>.
-                    Stok akan bertambah ketika Anda membuat Purchase Order (PO).
-                </p>
+                <p class="mb-0">Pastikan Anda sudah mengatur "Required Specs" di menu Kelola Kategori.</p>
             </div>
         </div>
         {% endif %}
     </div>
-
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Menggunakan safe agar JSON ter-render dengan benar sebagai object JS
+    const existingSpecs = {{ form.instance.extra_specs|default:"{}"|safe }};
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categorySelect = document.querySelector('select[name="category"]');
+    // NOTE: ID 'dynamic_specs_container' ini harus didefinisikan di forms.py (Helper Layout)
+    const specsContainer = document.getElementById('dynamic_specs_container');
+    
+    // Fungsi Generate Input
+    function generateInputs(specsList) {
+        specsContainer.innerHTML = ''; 
+
+        if (specsList.length === 0) {
+            specsContainer.innerHTML = '<p class="text-muted fst-italic small">Tidak ada spesifikasi khusus.</p>';
+            return;
+        }
+
+        specsList.forEach(label => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mb-3';
+            
+            const cleanLabel = label.trim();
+            const inputName = 'spec_' + cleanLabel; 
+            
+            // Ambil value lama jika ada (Mode Edit)
+            const oldValue = existingSpecs[cleanLabel] || '';
+
+            wrapper.innerHTML = `
+                <label class="form-label">${cleanLabel}</label>
+                <input type="text" name="${inputName}" class="textinput form-control" value="${oldValue}">
+            `;
+            specsContainer.appendChild(wrapper);
+        });
+    }
+
+    // Fungsi Fetch API
+    function fetchAndRenderSpecs() {
+        const categoryId = categorySelect.value;
+        
+        // Jika kategori kosong (misal pilih "---------"), bersihkan container
+        if (!categoryId) {
+            specsContainer.innerHTML = '';
+            return;
+        }
+
+        // Panggil API Backend
+        fetch(`/inventory/api/get-category-specs/${categoryId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                generateInputs(data.specs);
+            })
+            .catch(error => {
+                console.error('Error fetching specs:', error);
+                specsContainer.innerHTML = '<p class="text-danger small">Gagal memuat spesifikasi.</p>';
+            });
+    }
+
+    // Event Listeners
+    if (categorySelect) {
+        categorySelect.addEventListener('change', fetchAndRenderSpecs);
+        
+        // Trigger saat halaman load (Jika sedang Edit atau browser mengingat pilihan)
+        if (categorySelect.value) {
+            fetchAndRenderSpecs();
+        }
+    }
+});
+</script>
 {% endblock %}
