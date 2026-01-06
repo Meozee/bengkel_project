@@ -184,20 +184,26 @@ class PurchaseOrderDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteVie
 
 @login_required
 def item_autocomplete_view(request):
-    """Endpoint AJAX Select2."""
-    query = request.GET.get('q', '')
-    if len(query) < 1:
-        return JsonResponse([], safe=False)
+    """Endpoint AJAX Select2.
 
-    items = InventoryItem.objects.filter(
-        Q(name__icontains=query) | Q(sku__icontains=query)
-    )[:10]
-    
+    Jika parameter `q` kosong, kembalikan top-10 item sehingga Select2 dapat
+    menampilkan opsi ketika dropdown dibuka tanpa mengetik. Jika ada query,
+    lakukan pencarian seperti biasa.
+    """
+    query = request.GET.get('q', '')
+
+    if not query:
+        items = InventoryItem.objects.all().order_by('name')[:10]
+    else:
+        items = InventoryItem.objects.filter(
+            Q(name__icontains=query) | Q(sku__icontains=query)
+        ).order_by('name')[:10]
+
     results = [
         {
             'id': item.id,
             'text': f"{item.name} (Stok: {item.quantity})",
-            'buy_price': item.buy_price, 
+            'buy_price': item.buy_price,
         }
         for item in items
     ]

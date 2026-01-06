@@ -4,10 +4,16 @@
 
 {% block extra_head %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+<link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 <style>
-    .item-form.deleted { display: none; }
-    .select2-container { width: 100% !important; }
+    .item-form.deleted {
+        display: none;
+    }
+
+    .select2-container {
+        width: 100% !important;
+    }
 </style>
 {% endblock %}
 
@@ -23,7 +29,7 @@
                 <button type="submit" class="btn btn-success"><i class="bi bi-save me-1"></i> Simpan PO</button>
             </div>
         </div>
-        
+
         {% if form.errors or formset.errors %}
         <div class="alert alert-danger shadow-sm">
             <strong><i class="bi bi-exclamation-triangle-fill"></i> Error:</strong> Mohon perbaiki kesalahan input.
@@ -39,8 +45,9 @@
                         <div class="mb-3">{{ form.vendor.label_tag }} {{ form.vendor }}</div>
                         <div class="mb-3">{{ form.status.label_tag }} {{ form.status }}</div>
                         <div class="mb-3">{{ form.order_date.label_tag }} {{ form.order_date }}</div>
-                        <div class="mb-3">{{ form.expected_delivery_date.label_tag }} {{ form.expected_delivery_date }}</div>
-                        
+                        <div class="mb-3">{{ form.expected_delivery_date.label_tag }} {{ form.expected_delivery_date }}
+                        </div>
+
                         <hr>
                         <label class="form-label fw-bold">Penanggung Jawab (Pembeli)</label>
                         <div class="mb-2">
@@ -84,13 +91,17 @@
                                         {{ form.id }}
                                         <td class="p-2">
                                             {{ form.item }}
-                                            {% if form.item.errors %}<div class="text-danger small">{{ form.item.errors.as_text }}</div>{% endif %}
+                                            {% if form.item.errors %}<div class="text-danger small">{{
+                                                form.item.errors.as_text }}</div>{% endif %}
                                         </td>
                                         <td class="p-2">{{ form.quantity }}</td>
                                         <td class="p-2">{{ form.unit_price }}</td>
                                         <td class="text-center p-2">
-                                            <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn"><i class="bi bi-trash"></i></button>
-                                            <div class="d-none">{% if form.instance.pk %}{{ form.DELETE }}{% endif %}</div>
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-danger remove-item-btn"><i
+                                                    class="bi bi-trash"></i></button>
+                                            <div class="d-none">{% if form.instance.pk %}{{ form.DELETE }}{% endif %}
+                                            </div>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -112,7 +123,8 @@
             <td class="p-2">{{ formset.empty_form.quantity }}</td>
             <td class="p-2">{{ formset.empty_form.unit_price }}</td>
             <td class="text-center p-2">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn"><i class="bi bi-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn"><i
+                        class="bi bi-trash"></i></button>
             </td>
         </tr>
     </tbody>
@@ -124,73 +136,73 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
-$(document).ready(function() {
-    
-    // 1. Fungsi Init Select2
-    function initializeSelect2(element) {
-        $(element).select2({
-            theme: 'bootstrap-5',
-            placeholder: 'Cari barang (nama/SKU)...',
-            allowClear: true,
-            ajax: {
-                url: "{% url 'purchases:item_autocomplete' %}",
-                dataType: 'json',
-                delay: 250,
-                data: function (params) { return { q: params.term }; },
-                processResults: function (data) { return { results: data }; },
-                cache: true
-            }
-        }).on('select2:select', function (e) {
-            var data = e.params.data;
-            // Auto-fill harga beli terakhir dari master data
-            $(this).closest('tr').find('input[name$="-unit_price"]').val(data.buy_price);
-        });
-    }
+    $(document).ready(function () {
 
-    // Init pada load awal
-    $('.item-form-container select').each(function() {
-        initializeSelect2(this);
-    });
-    
-    // Init Select2 untuk Vendor & Montir (jika belum otomatis)
-    $('.select2-enable').select2({
-        theme: 'bootstrap-5',
-        width: '100%'
-    });
-
-    // 2. Tambah Baris Baru
-    $('#add-item-btn').on('click', function(e) {
-        e.preventDefault();
-        const formsetPrefix = '{{ formset.prefix }}';
-        const totalFormsInput = $(`#id_${formsetPrefix}-TOTAL_FORMS`);
-        let formIndex = parseInt(totalFormsInput.val());
-
-        // Clone template
-        let newFormHtml = $('#empty-form-template').html().replace(/__prefix__/g, formIndex);
-        $('.item-form-container').append(newFormHtml);
-
-        // Init Select2 di baris baru
-        initializeSelect2($(`#id_${formsetPrefix}-${formIndex}-item`));
-
-        // Update counter
-        totalFormsInput.val(formIndex + 1);
-    });
-
-    // 3. Hapus Baris
-    $('.item-form-container').on('click', '.remove-item-btn', function(e) {
-        e.preventDefault();
-        const row = $(this).closest('.item-form');
-        const deleteInput = row.find('input[type="checkbox"][name$="-DELETE"]');
-
-        if (deleteInput.length) {
-            // Jika row sudah ada di DB, centang DELETE dan sembunyikan
-            deleteInput.prop('checked', true);
-            row.addClass('deleted');
-        } else {
-            // Jika row baru, hapus dari DOM
-            row.remove();
+        // 1. Fungsi Init Select2
+        function initializeSelect2(element) {
+            $(element).select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Cari barang (nama/SKU)...',
+                allowClear: true,
+                minimumInputLength: 0,
+                ajax: {
+                    url: "{% url 'purchases:item_autocomplete' %}",
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) { return { q: params.term || '' }; },
+                    processResults: function (data) { return { results: data }; },
+                    cache: true
+                }
+            }).on('select2:select', function (e) {
+                var data = e.params.data;
+                $(this).closest('tr').find('input[name$="-unit_price"]').val(data.buy_price);
+            });
         }
+
+        // Init pada load awal
+        $('.item-form-container select').each(function () {
+            initializeSelect2(this);
+        });
+
+        // Init Select2 untuk Vendor & Montir (jika belum otomatis)
+        $('.select2-enable').select2({
+            theme: 'bootstrap-5',
+            width: '100%'
+        });
+
+        // 2. Tambah Baris Baru
+        $('#add-item-btn').on('click', function (e) {
+            e.preventDefault();
+            const formsetPrefix = '{{ formset.prefix }}';
+            const totalFormsInput = $(`#id_${formsetPrefix}-TOTAL_FORMS`);
+            let formIndex = parseInt(totalFormsInput.val());
+
+            // Clone template
+            let newFormHtml = $('#empty-form-template').html().replace(/__prefix__/g, formIndex);
+            $('.item-form-container').append(newFormHtml);
+
+            // Init Select2 di baris baru
+            initializeSelect2($(`#id_${formsetPrefix}-${formIndex}-item`));
+
+            // Update counter
+            totalFormsInput.val(formIndex + 1);
+        });
+
+        // 3. Hapus Baris
+        $('.item-form-container').on('click', '.remove-item-btn', function (e) {
+            e.preventDefault();
+            const row = $(this).closest('.item-form');
+            const deleteInput = row.find('input[type="checkbox"][name$="-DELETE"]');
+
+            if (deleteInput.length) {
+                // Jika row sudah ada di DB, centang DELETE dan sembunyikan
+                deleteInput.prop('checked', true);
+                row.addClass('deleted');
+            } else {
+                // Jika row baru, hapus dari DOM
+                row.remove();
+            }
+        });
     });
-});
 </script>
 {% endblock %}

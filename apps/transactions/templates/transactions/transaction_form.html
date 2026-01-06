@@ -6,16 +6,19 @@
 
 {% block extra_head %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+    rel="stylesheet" />
 <style>
-    .formset-row.deleted { display: none; }
-    
+    .formset-row.deleted {
+        display: none;
+    }
+
     /* CSS FIX UNTUK MEMPERBAIKI TAMPILAN GANDA */
-    .select2-container { 
-        width: 100% !important; 
+    .select2-container {
+        width: 100% !important;
         display: block;
     }
-    
+
     /* Sembunyikan elemen select asli jika select2 sudah merendernya */
     select.select2-hidden-accessible {
         border: 0 !important;
@@ -42,7 +45,7 @@
 
     <form method="post" id="transactionForm">
         {% csrf_token %}
-        
+
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-primary text-white fw-bold">1. Informasi Pelanggan & Kendaraan</div>
             <div class="card-body">
@@ -80,9 +83,9 @@
                             <tr class="formset-row item-row">
                                 {{ form.id }}
                                 <td class="p-2" style="min-width: 250px;">
-                                    {{ form.item }} 
+                                    {{ form.item }}
                                     {% if form.item.errors %}
-                                        <div class="text-danger small">{{ form.item.errors.0 }}</div>
+                                    <div class="text-danger small">{{ form.item.errors.0 }}</div>
                                     {% endif %}
                                 </td>
                                 <td class="p-2">{{ form.quantity }}</td>
@@ -179,7 +182,8 @@
             <td class="p-2">{{ item_formset.empty_form.unit_price }}</td>
             <td class="p-2">{{ item_formset.empty_form.discount_percentage }}</td>
             <td class="p-2 text-center">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i
+                        class="bi bi-trash"></i></button>
                 <div class="d-none">{{ item_formset.empty_form.DELETE }}</div>
             </td>
         </tr>
@@ -192,7 +196,8 @@
             <td class="p-2">{{ service_formset.empty_form.unit_price }}</td>
             <td class="p-2">{{ service_formset.empty_form.discount_percentage }}</td>
             <td class="p-2 text-center">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i
+                        class="bi bi-trash"></i></button>
                 <div class="d-none">{{ service_formset.empty_form.DELETE }}</div>
             </td>
         </tr>
@@ -203,110 +208,111 @@
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-$(document).ready(function() {
-    
-    // 1. Init Select2
-    function initSelect2(element) {
-        $(element).select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: 'Pilih...',
-            allowClear: true
-        });
-    }
-    $('.select2-enable').select2({ theme: 'bootstrap-5', width: '100%' });
-    $('select').each(function() { initSelect2(this); });
+    $(document).ready(function () {
 
-    // 2. Add Row
-    function addRow(type) {
-        const prefix = (type === 'item') ? 'items' : 'services';
-        const tbodyId = `#${type}-tbody`;
-        const emptyId = `#${type}-empty-form`;
-        const totalInput = $(`#id_${prefix}-TOTAL_FORMS`);
-        
-        let idx = parseInt(totalInput.val());
-        let html = $(emptyId).html().replace(/__prefix__/g, idx);
-        
-        $(tbodyId).append(html);
-        initSelect2($(tbodyId).find(`tr:last select`));
-        totalInput.val(idx + 1);
-    }
-
-    $('#add-item').click(function(e) { e.preventDefault(); addRow('item'); });
-    $('#add-service').click(function(e) { e.preventDefault(); addRow('service'); });
-
-    // 3. Remove Row
-    $(document).on('click', '.remove-row', function(e) {
-        e.preventDefault();
-        let row = $(this).closest('tr');
-        let tbody = row.closest('tbody');
-        let prefix = (tbody.attr('id') === 'item-tbody') ? 'items' : 'services';
-        let totalInput = $(`#id_${prefix}-TOTAL_FORMS`);
-        
-        // Cek apakah ini row yang sudah ada di database (punya ID)
-        let deleteInput = row.find('input[type="checkbox"][name$="-DELETE"]');
-        let hasId = row.find('input[type="hidden"][name$="-id"]').val();
-
-        if (hasId) {
-            // Kalau data lama: Jangan hapus HTML, cuma sembunyikan & centang DELETE
-            deleteInput.prop('checked', true);
-            row.addClass('deleted');
-        } else {
-            // Kalau data baru (belum save): Hapus HTML-nya & KURANGI TOTAL FORMS
-            row.remove();
-            let currentTotal = parseInt(totalInput.val());
-            totalInput.val(currentTotal - 1);
-            
-            // Opsional: Re-index name attributes (supaya urut 0, 1, 2...)
-            // Tapi biasanya Django formset cukup pintar menangani index lompat kalau totalnya benar.
-            // Untuk aman, cukup kurangi total saja dulu.
+        // 1. Init Select2
+        function initSelect2(element) {
+            var $el = $(element);
+            // Jika sudah di-init, skip
+            if ($el.data('select2') || $el.hasClass('select2-hidden-accessible')) return;
+            $el.select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Pilih...',
+                allowClear: true
+            });
         }
+
+        // 2. Add Row
+        function addRow(type) {
+            const prefix = (type === 'item') ? 'items' : 'services';
+            const tbodyId = `#${type}-tbody`;
+            const emptyId = `#${type}-empty-form`;
+            const totalInput = $(`#id_${prefix}-TOTAL_FORMS`);
+
+            let idx = parseInt(totalInput.val());
+            let html = $(emptyId).html().replace(/__prefix__/g, idx);
+
+            $(tbodyId).append(html);
+            initSelect2($(tbodyId).find(`tr:last select`));
+            totalInput.val(idx + 1);
+        }
+
+        $('#add-item').click(function (e) { e.preventDefault(); addRow('item'); });
+        $('#add-service').click(function (e) { e.preventDefault(); addRow('service'); });
+
+        // 3. Remove Row
+        $(document).on('click', '.remove-row', function (e) {
+            e.preventDefault();
+            let row = $(this).closest('tr');
+            let tbody = row.closest('tbody');
+            let prefix = (tbody.attr('id') === 'item-tbody') ? 'items' : 'services';
+            let totalInput = $(`#id_${prefix}-TOTAL_FORMS`);
+
+            // Cek apakah ini row yang sudah ada di database (punya ID)
+            let deleteInput = row.find('input[type="checkbox"][name$="-DELETE"]');
+            let hasId = row.find('input[type="hidden"][name$="-id"]').val();
+
+            if (hasId) {
+                // Kalau data lama: Jangan hapus HTML, cuma sembunyikan & centang DELETE
+                deleteInput.prop('checked', true);
+                row.addClass('deleted');
+            } else {
+                // Kalau data baru (belum save): Hapus HTML-nya & KURANGI TOTAL FORMS
+                row.remove();
+                let currentTotal = parseInt(totalInput.val());
+                totalInput.val(currentTotal - 1);
+
+                // Opsional: Re-index name attributes (supaya urut 0, 1, 2...)
+                // Tapi biasanya Django formset cukup pintar menangani index lompat kalau totalnya benar.
+                // Untuk aman, cukup kurangi total saja dulu.
+            }
+            calculateTotal();
+        });
+
+        // 4. Auto Fill Price
+        $(document).on('change', 'select[name$="-item"]', function () {
+            let id = $(this).val();
+            let row = $(this).closest('tr');
+            if (id) $.get(`/transactions/api/item-price/${id}/`, function (data) {
+                row.find('input[name$="-unit_price"]').val(data.price);
+                calculateTotal();
+            });
+        });
+
+        $(document).on('change', 'select[name$="-service"]', function () {
+            let id = $(this).val();
+            let row = $(this).closest('tr');
+            if (id) $.get(`/transactions/api/service-price/${id}/`, function (data) {
+                row.find('input[name$="-unit_price"]').val(data.price);
+                calculateTotal();
+            });
+        });
+
+        // 5. Calculate Total
+        function calculateTotal() {
+            let grand = 0;
+
+            // Items & Services
+            $('.formset-row:not(.deleted)').each(function () {
+                let qty = parseFloat($(this).find('input[name$="-quantity"]').val()) || 0;
+                let price = parseFloat($(this).find('input[name$="-unit_price"]').val()) || 0;
+                let disc = parseFloat($(this).find('input[name$="-discount_percentage"]').val()) || 0;
+
+                grand += (qty * price) * ((100 - disc) / 100);
+            });
+
+            // Extra
+            let other = parseFloat($('input[name="other_charges"]').val()) || 0;
+            let discFinal = parseFloat($('input[name="discount_amount"]').val()) || 0;
+
+            grand = grand + other - discFinal;
+
+            $('#grand-total').text('Rp ' + grand.toLocaleString('id-ID'));
+        }
+
+        $(document).on('input change', 'input, select', calculateTotal);
         calculateTotal();
     });
-
-    // 4. Auto Fill Price
-    $(document).on('change', 'select[name$="-item"]', function() {
-        let id = $(this).val();
-        let row = $(this).closest('tr');
-        if(id) $.get(`/transactions/api/item-price/${id}/`, function(data) {
-            row.find('input[name$="-unit_price"]').val(data.price);
-            calculateTotal();
-        });
-    });
-
-    $(document).on('change', 'select[name$="-service"]', function() {
-        let id = $(this).val();
-        let row = $(this).closest('tr');
-        if(id) $.get(`/transactions/api/service-price/${id}/`, function(data) {
-            row.find('input[name$="-unit_price"]').val(data.price);
-            calculateTotal();
-        });
-    });
-
-    // 5. Calculate Total
-    function calculateTotal() {
-        let grand = 0;
-        
-        // Items & Services
-        $('.formset-row:not(.deleted)').each(function() {
-            let qty = parseFloat($(this).find('input[name$="-quantity"]').val()) || 0;
-            let price = parseFloat($(this).find('input[name$="-unit_price"]').val()) || 0;
-            let disc = parseFloat($(this).find('input[name$="-discount_percentage"]').val()) || 0;
-            
-            grand += (qty * price) * ((100 - disc) / 100);
-        });
-
-        // Extra
-        let other = parseFloat($('input[name="other_charges"]').val()) || 0;
-        let discFinal = parseFloat($('input[name="discount_amount"]').val()) || 0;
-        
-        grand = grand + other - discFinal;
-        
-        $('#grand-total').text('Rp ' + grand.toLocaleString('id-ID'));
-    }
-
-    $(document).on('input change', 'input, select', calculateTotal);
-    calculateTotal();
-});
 </script>
 {% endblock %}

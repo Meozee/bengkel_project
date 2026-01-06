@@ -21,14 +21,16 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label small text-muted">Cari (ID/Vendor/Pembeli)</label>
-                        <input type="text" name="q" class="form-control" value="{{ current_query }}" placeholder="Contoh: PO-123, Toko A...">
+                        <input type="text" name="q" class="form-control" value="{{ current_query }}"
+                            placeholder="Contoh: PO-123, Toko A...">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small text-muted">Vendor</label>
                         <select name="vendor" class="form-select">
                             <option value="">Semua Vendor</option>
                             {% for v in vendors %}
-                            <option value="{{ v.pk }}" {% if current_vendor == v.pk %}selected{% endif %}>{{ v.name }}</option>
+                            <option value="{{ v.pk }}" {% if current_vendor == v.pk %}selected{% endif %}>{{ v.name }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -37,7 +39,8 @@
                         <select name="status" class="form-select">
                             <option value="">Semua Status</option>
                             {% for value, text in statuses %}
-                            <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ text }}</option>
+                            <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ text }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -50,7 +53,8 @@
                         <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
                     </div>
                     <div class="col-md-1">
-                        <button type="submit" class="btn btn-info text-white w-100" title="Cari"><i class="bi bi-search"></i></button>
+                        <button type="submit" class="btn btn-info text-white w-100" title="Cari"><i
+                                class="bi bi-search"></i></button>
                     </div>
                 </div>
             </form>
@@ -76,14 +80,15 @@
                         {% for po in purchases %}
                         <tr>
                             <td>
-                                <a href="{% url 'purchases:purchase_detail' po.pk %}" class="text-decoration-none fw-bold">
+                                <a href="{% url 'purchases:purchase_detail' po.pk %}"
+                                    class="text-decoration-none fw-bold">
                                     PO-{{ po.id }}
                                 </a>
                             </td>
-                            
+
                             <td>{{ po.order_date|date:"d M Y, H:i" }}</td>
                             <td>{{ po.vendor.name }}</td>
-                            
+
                             <td>
                                 <i class="bi bi-person-circle text-muted me-1"></i>
                                 {{ po.purchaser_name }}
@@ -94,42 +99,49 @@
                                     <button type="button" class="btn btn-sm 
                                         {% if po.status == 'COMPLETED' %}btn-success
                                         {% elif po.status == 'PENDING' %}btn-warning
-                                        {% else %}btn-secondary{% endif %} dropdown-toggle" 
-                                        data-bs-toggle="dropdown" aria-expanded="false"
-                                        data-bs-boundary="viewport">
-                                        
+                                        {% else %}btn-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown"
+                                        aria-expanded="false" data-bs-boundary="window">
+
                                         {{ po.get_status_display }}
                                     </button>
-                                    
+
                                     <ul class="dropdown-menu shadow">
                                         <li>
-                                            <a class="dropdown-item" href="{% url 'purchases:update_status' po.pk 'COMPLETED' %}"
-                                               onclick="return confirm('Barang sudah diterima? Stok akan bertambah otomatis.')">
-                                                <i class="bi bi-check-circle-fill text-success me-2"></i>Selesai (Terima Barang)
+                                            <a class="dropdown-item"
+                                                href="{% url 'purchases:update_status' po.pk 'COMPLETED' %}"
+                                                onclick="return confirm('Barang sudah diterima? Stok akan bertambah otomatis.')">
+                                                <i class="bi bi-check-circle-fill text-success me-2"></i>Selesai (Terima
+                                                Barang)
                                             </a>
                                         </li>
                                         <li>
-                                            <a class="dropdown-item" href="{% url 'purchases:update_status' po.pk 'PENDING' %}">
+                                            <a class="dropdown-item"
+                                                href="{% url 'purchases:update_status' po.pk 'PENDING' %}">
                                                 <i class="bi bi-hourglass-split text-warning me-2"></i>Pending
                                             </a>
                                         </li>
-                                        <li><hr class="dropdown-divider"></li>
                                         <li>
-                                            <a class="dropdown-item text-danger" href="{% url 'purchases:update_status' po.pk 'CANCELLED' %}"
-                                               onclick="return confirm('Batalkan PO ini? Stok akan dikembalikan (jika sudah masuk).')">
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-danger"
+                                                href="{% url 'purchases:update_status' po.pk 'CANCELLED' %}"
+                                                onclick="return confirm('Batalkan PO ini? Stok akan dikembalikan (jika sudah masuk).')">
                                                 <i class="bi bi-x-circle-fill me-2"></i>Batalkan PO
                                             </a>
                                         </li>
                                     </ul>
                                 </div>
                             </td>
-                            
+
                             <td class="text-end fw-bold">Rp {{ po.total_amount|intcomma }}</td>
-                            
+
                             <td class="text-end">
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'purchases:purchase_update' po.pk %}" class="btn btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
-                                    <a href="{% url 'purchases:purchase_delete' po.pk %}" class="btn btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></a>
+                                    <a href="{% url 'purchases:purchase_update' po.pk %}"
+                                        class="btn btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                                    <a href="{% url 'purchases:purchase_delete' po.pk %}" class="btn btn-outline-danger"
+                                        title="Hapus"><i class="bi bi-trash"></i></a>
                                 </div>
                             </td>
                         </tr>
@@ -144,16 +156,21 @@
                     </tbody>
                 </table>
             </div>
-            
+
             {% if is_paginated %}
             <nav class="mt-4">
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
-                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ current_query }}&status={{ current_status }}&vendor={{ current_vendor }}&start_date={{ start_date }}&end_date={{ end_date }}">&laquo;</a></li>
+                    <li class="page-item"><a class="page-link"
+                            href="?page={{ page_obj.previous_page_number }}&q={{ current_query }}&status={{ current_status }}&vendor={{ current_vendor }}&start_date={{ start_date }}&end_date={{ end_date }}">&laquo;</a>
+                    </li>
                     {% endif %}
-                    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{
+                            page_obj.paginator.num_pages }}</span></li>
                     {% if page_obj.has_next %}
-                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ current_query }}&status={{ current_status }}&vendor={{ current_vendor }}&start_date={{ start_date }}&end_date={{ end_date }}">&raquo;</a></li>
+                    <li class="page-item"><a class="page-link"
+                            href="?page={{ page_obj.next_page_number }}&q={{ current_query }}&status={{ current_status }}&vendor={{ current_vendor }}&start_date={{ start_date }}&end_date={{ end_date }}">&raquo;</a>
+                    </li>
                     {% endif %}
                 </ul>
             </nav>

@@ -34,7 +34,7 @@
 }
 
 .card.border-start {
-    overflow: hidden;
+    overflow: visible;
     position: relative;
 }
 
@@ -205,15 +205,16 @@ canvas {
 
 /* === Responsive Stats Cards === */
 @media (max-width: 768px) {
+
     .col-xl-3,
     .col-md-6 {
         margin-bottom: 1rem;
     }
-    
+
     .h5 {
         font-size: 1.1rem !important;
     }
-    
+
     .text-xs {
         font-size: 0.7rem;
     }
@@ -237,7 +238,7 @@ canvas {
     margin-right: -0.75rem;
 }
 
-.row > [class*='col-'] {
+.row>[class*='col-'] {
     padding-left: 0.75rem;
     padding-right: 0.75rem;
 }
@@ -291,17 +292,23 @@ canvas {
 }
 
 @keyframes spin {
-    0% { transform: translate(-50%, -50%) rotate(0deg); }
-    100% { transform: translate(-50%, -50%) rotate(360deg); }
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
 }
 
 /* === Print Styles === */
 @media print {
+
     .btn,
     .card-header form {
         display: none !important;
     }
-    
+
     .card {
         break-inside: avoid;
         box-shadow: none !important;
@@ -315,11 +322,11 @@ canvas {
         background-color: #2d3748;
         color: #e2e8f0;
     }
-    
+
     body.dark-mode .text-gray-800 {
         color: #e2e8f0 !important;
     }
-    
+
     body.dark-mode .form-select,
     body.dark-mode .form-control {
         background-color: #1a202c;

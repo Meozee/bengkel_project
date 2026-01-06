@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load humanize %} 
+{% load humanize %}
 {% load static %}
 
 {% block title %}Dashboard - Bengkel{% endblock %}
@@ -21,22 +21,29 @@
                 <div class="col-md-3">
                     <label for="periode" class="form-label">Periode</label>
                     <select name="periode" id="periode" class="form-select" onchange="toggleCustomDate(this.value)">
-                        <option value="bulan_ini" {% if current_periode == 'bulan_ini' %}selected{% endif %}>Bulan Ini</option>
-                        <option value="bulan_lalu" {% if current_periode == 'bulan_lalu' %}selected{% endif %}>Bulan Lalu</option>
-                        <option value="keseluruhan" {% if current_periode == 'keseluruhan' %}selected{% endif %}>Keseluruhan</option>
-                        <option value="custom" {% if current_periode == 'custom' %}selected{% endif %}>Custom Range</option>
+                        <option value="bulan_ini" {% if current_periode == 'bulan_ini' %}selected{% endif %}>Bulan Ini
+                        </option>
+                        <option value="bulan_lalu" {% if current_periode == 'bulan_lalu' %}selected{% endif %}>Bulan Lalu
+                        </option>
+                        <option value="keseluruhan" {% if current_periode == 'keseluruhan' %}selected{% endif %}>
+                            Keseluruhan</option>
+                        <option value="custom" {% if current_periode == 'custom' %}selected{% endif %}>Custom Range
+                        </option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label for="start_date" class="form-label">Tanggal Mulai</label>
-                    <input type="date" name="start_date" id="start_date" class="form-control" value="{{ current_start_date }}" {% if current_periode != 'custom' %}disabled{% endif %}>
+                    <input type="date" name="start_date" id="start_date" class="form-control"
+                        value="{{ current_start_date }}" {% if current_periode != 'custom' %}disabled{% endif %}>
                 </div>
                 <div class="col-md-3">
                     <label for="end_date" class="form-label">Tanggal Akhir</label>
-                    <input type="date" name="end_date" id="end_date" class="form-control" value="{{ current_end_date }}" {% if current_periode != 'custom' %}disabled{% endif %}>
+                    <input type="date" name="end_date" id="end_date" class="form-control" value="{{ current_end_date }}"
+                        {% if current_periode != 'custom' %}disabled{% endif %}>
                 </div>
                 <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Terapkan Filter</button>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Terapkan
+                        Filter</button>
                 </div>
             </form>
         </div>
@@ -44,7 +51,7 @@
 
     <div class="row">
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-start border-success border-4 shadow h-100 py-2">
+            <div class="card card--clip border-start border-success border-4 shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
@@ -58,12 +65,14 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-start border-danger border-4 shadow h-100 py-2">
+            <div class="card card--clip border-start border-danger border-4 shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total Pengeluaran</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ total_pengeluaran|intcomma }}</div>
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total Pengeluaran
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ total_pengeluaran|intcomma }}
+                            </div>
                         </div>
                         <div class="col-auto"><i class="bi bi-cart-x h2 text-gray-300"></i></div>
                     </div>
@@ -72,7 +81,7 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-start border-info border-4 shadow h-100 py-2">
+            <div class="card card--clip border-start border-info border-4 shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
@@ -86,7 +95,8 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card {% if persentase_perubahan >= 0 %}border-start border-primary border-4{% else %}border-start border-warning border-4{% endif %} shadow h-100 py-2">
+            <div
+                class="card card--clip {% if persentase_perubahan >= 0 %}border-start border-primary border-4{% else %}border-start border-warning border-4{% endif %} shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
@@ -150,11 +160,13 @@
     <div class="row">
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="card shadow h-100">
-                <div class="card-header py-3 bg-white"><h6 class="m-0 font-weight-bold text-primary">Top Montir (Job)</h6></div>
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary">Top Montir (Job)</h6>
+                </div>
                 <div class="card-body"><canvas id="topMontirChart"></canvas></div>
             </div>
         </div>
-        
+
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="card shadow h-100">
                 <div class="card-header py-3 bg-white d-flex justify-content-between">
@@ -167,28 +179,36 @@
 
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="card shadow h-100">
-                <div class="card-header py-3 bg-white"><h6 class="m-0 font-weight-bold text-primary">Top Pelanggan</h6></div>
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary">Top Pelanggan</h6>
+                </div>
                 <div class="card-body"><canvas id="topPelangganChart"></canvas></div>
             </div>
         </div>
-        
+
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="card shadow h-100">
-                <div class="card-header py-3 bg-white"><h6 class="m-0 font-weight-bold text-primary">Top Barang Terjual</h6></div>
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary">Top Barang Terjual</h6>
+                </div>
                 <div class="card-body"><canvas id="topBarangChart"></canvas></div>
             </div>
         </div>
-        
+
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="card shadow h-100">
-                <div class="card-header py-3 bg-white"><h6 class="m-0 font-weight-bold text-primary">Top Service</h6></div>
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary">Top Service</h6>
+                </div>
                 <div class="card-body"><canvas id="topServiceChart"></canvas></div>
             </div>
         </div>
-        
+
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="card shadow h-100">
-                <div class="card-header py-3 bg-white"><h6 class="m-0 font-weight-bold text-primary">Top Vendor Pembelian</h6></div>
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary">Top Vendor Pembelian</h6>
+                </div>
                 <div class="card-body"><canvas id="topVendorChart"></canvas></div>
             </div>
         </div>
@@ -202,14 +222,14 @@
 
 <script>
     // Data Grafik
-    const trenLabels = {{ tren_labels_json|safe }};
-    const trenPemasukanData = {{ tren_pemasukan_data_json|safe }};
-    const trenPengeluaranData = {{ tren_pengeluaran_data_json|safe }};
-    const distPemasukanLabels = {{ dist_pemasukan_labels_json|safe }};
-    const distPemasukanData = {{ dist_pemasukan_data_json|safe }};
-    const distPengeluaranLabels = {{ dist_pengeluaran_labels_json|safe }};
-    const distPengeluaranData = {{ dist_pengeluaran_data_json|safe }};
-    const topChartsData = {{ top_charts_data_json|safe }};
+    const trenLabels = {{ tren_labels_json| safe }};
+    const trenPemasukanData = {{ tren_pemasukan_data_json| safe }};
+    const trenPengeluaranData = {{ tren_pengeluaran_data_json| safe }};
+    const distPemasukanLabels = {{ dist_pemasukan_labels_json| safe }};
+    const distPemasukanData = {{ dist_pemasukan_data_json| safe }};
+    const distPengeluaranLabels = {{ dist_pengeluaran_labels_json| safe }};
+    const distPengeluaranData = {{ dist_pengeluaran_data_json| safe }};
+    const topChartsData = {{ top_charts_data_json| safe }};
 
     // Helper IDR
     const formatRupiah = (value) => {
@@ -219,7 +239,7 @@
     // Tooltip Config
     const defaultTooltipOptions = {
         callbacks: {
-            label: function(context) {
+            label: function (context) {
                 let label = context.dataset.label || '';
                 if (label) label += ': ';
                 if (context.parsed.y !== null) {
@@ -235,11 +255,11 @@
             }
         }
     };
-    
+
     // Donut Tooltip
     const donutTooltipOptions = {
-         callbacks: {
-            label: function(context) {
+        callbacks: {
+            label: function (context) {
                 let label = context.label || '';
                 let value = context.parsed;
                 let sum = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
@@ -248,7 +268,7 @@
             }
         }
     };
-    
+
     // 1. Tren Chart
     const ctxTren = document.getElementById('trenChart').getContext('2d');
     if (trenLabels.length > 0) {
@@ -283,7 +303,7 @@
     renderDonut('pengeluaranDonut', distPengeluaranLabels, distPengeluaranData);
 
     // 3. Horizontal Bar Charts (Top 5)
-    const renderBar = (id, labels, data, label, isCurrency = false, color='#4e73df') => {
+    const renderBar = (id, labels, data, label, isCurrency = false, color = '#4e73df') => {
         if (data.length > 0) {
             new Chart(document.getElementById(id).getContext('2d'), {
                 type: 'bar',
@@ -327,7 +347,7 @@
         }
     }
     // Jalankan saat halaman selesai loading untuk set status awal
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         toggleCustomDate(document.getElementById('periode').value);
     });
 </script>
