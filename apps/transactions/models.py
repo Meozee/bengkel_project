@@ -3,6 +3,8 @@
 from decimal import Decimal
 from django.db import models
 from django.utils import timezone
+
+# Import model dari app lain
 from apps.master_data.models import Customer, Vehicle, Mechanic, Service
 from apps.inventory.models import InventoryItem
 
@@ -12,16 +14,22 @@ class Transaction(models.Model):
         COMPLETED = 'COMPLETED', 'Completed (Selesai)'
         CANCELLED = 'CANCELLED', 'Cancelled (Batal)'
 
-    # Identitas
+    # ==========================
+    # 1. IDENTITAS TRANSAKSI
+    # ==========================
     invoice_number = models.CharField(max_length=50, unique=True, editable=False)
+    
+    # Relasi (Set Null jika master data dihapus, agar histori transaksi tetap ada)
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True)
     mechanic = models.ForeignKey(Mechanic, on_delete=models.SET_NULL, null=True, blank=True)
 
-    # Waktu & Status
-    created_at = models.DateTimeField(auto_now_add=True) # Waktu Masuk
-    updated_at = models.DateTimeField(auto_now=True)
-    completed_at = models.DateTimeField(null=True, blank=True) # Waktu Selesai (Otomatis diisi sistem)
+    # ==========================
+    # 2. WAKTU & STATUS
+    # ==========================
+    created_at = models.DateTimeField(auto_now_add=True)  # Waktu dibuat (Masuk Bengkel)
+    updated_at = models.DateTimeField(auto_now=True)      # Waktu terakhir edit
+    completed_at = models.DateTimeField(null=True, blank=True) # Waktu selesai (diisi otomatis saat status COMPLETED)
     
     status = models.CharField(
         max_length=20, 
@@ -29,12 +37,14 @@ class Transaction(models.Model):
         default=StatusChoices.PENDING
     )
 
-    # Keuangan
+    # ==========================
+    # 3. KEUANGAN
+    # ==========================
     other_charges = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Biaya tambahan lain-lain")
-    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Diskon final (Rupiah)")
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Diskon final (Nominal Rupiah)")
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 
-    notes = models.TextField(blank=True)
+    notes = models.TextField(blank=True, help_text="Catatan keluhan atau perbaikan")
 
     class Meta:
         ordering = ['-created_at']
@@ -42,15 +52,24 @@ class Transaction(models.Model):
     def __str__(self):
         return self.invoice_number
 
+    # ==========================
+    # LOGIC METHODS
+    # ==========================
+
     def save(self, *args, **kwargs):
-        # Generate Invoice Number Otomatis: INV-YYYYMM-0001
+        """
+        Override save untuk generate Invoice Number otomatis.
+        Format: INV-YYYYMM-0001
+        """
         if not self.invoice_number:
             now = timezone.now()
             month_str = now.strftime('%Y%m')
+            # Cari transaksi terakhir di bulan ini
             last_txn = Transaction.objects.filter(invoice_number__startswith=f"INV-{month_str}").order_by('-id').first()
             
             if last_txn:
                 try:
+                    # Ambil nomor urut terakhir, tambah 1
                     last_seq = int(last_txn.invoice_number.split('-')[-1])
                     new_seq = last_seq + 1
                 except ValueError:
@@ -64,19 +83,34 @@ class Transaction(models.Model):
 
     @property
     def duration_minutes(self):
-        """Menghitung durasi pengerjaan (KPI Montir)"""
+        """Menghitung durasi pengerjaan dalam menit (KPI Montir)"""
         if self.completed_at and self.created_at:
             diff = self.completed_at - self.created_at
             return int(diff.total_seconds() / 60)
         return 0
 
+    # --- LOGIKA KONTROL TOMBOL HTML ---
+    def can_be_edited(self):
+        """Hanya status PENDING yang boleh diedit"""
+        return self.status == self.StatusChoices.PENDING
+
+    def can_be_deleted(self):
+        """Hanya status PENDING yang boleh dihapus"""
+        return self.status == self.StatusChoices.PENDING
+
 
 class TransactionItem(models.Model):
+    """Detail Barang/Sparepart yang dibeli"""
     transaction = models.ForeignKey(Transaction, related_name='items', on_delete=models.CASCADE)
-    item = models.ForeignKey(InventoryItem, on_delete=models.PROTECT)
+    item = models.ForeignKey(InventoryItem, on_delete=models.PROTECT) # Protect: Barang gak boleh dihapus kalo ada transaksi
     quantity = models.PositiveIntegerField(default=1)
+    
+    # Harga disimpan saat transaksi terjadi (Snapshot), agar kalau harga master berubah, history tidak berubah
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+
+    def __str__(self):
+        return f"{self.item.name} ({self.quantity})"
 
     @property
     def subtotal(self):
@@ -84,12 +118,19 @@ class TransactionItem(models.Model):
         disc = price * (self.discount_percentage / Decimal('100'))
         return price - disc
 
+
 class TransactionService(models.Model):
+    """Detail Jasa Service yang dilakukan"""
     transaction = models.ForeignKey(Transaction, related_name='services', on_delete=models.CASCADE)
     service = models.ForeignKey(Service, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField(default=1)
+    
+    # Harga disimpan snapshot
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+
+    def __str__(self):
+        return f"{self.service.name} ({self.quantity})"
 
     @property
     def subtotal(self):
