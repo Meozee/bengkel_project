@@ -1,37 +1,26 @@
-# apps/inventory/views.py
-
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.db.models import Q, F
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse 
 
-# Import Security & Logging Custom kita
-from apps.accounts.decorators import owner_required
+# Import Security & Logging Custom (Asumsi file ini ada sesuai konteks sebelumnya)
 from apps.accounts.utils import log_activity
 
 from .models import InventoryItem, Category
 from .forms import CategoryForm, InventoryForm
 
 # ==============================
-# API VIEWS (Untuk JavaScript)
+# API VIEWS
 # ==============================
 
 @login_required
 def get_category_specs(request, category_id):
-    """
-    API untuk mengambil daftar spesifikasi kategori.
-    Digunakan oleh JavaScript di form inventory.
-    """
     category = get_object_or_404(Category, id=category_id)
-    
     if category.required_specs:
-        # Pecah string "Volume, SAE" menjadi list ['Volume', 'SAE']
-        # Gunakan strip() untuk menghapus spasi berlebih
         specs_list = [s.strip() for s in category.required_specs.split(',') if s.strip()]
     else:
         specs_list = []
-    
     return JsonResponse({'specs': specs_list})
 
 # ==============================
@@ -40,8 +29,11 @@ def get_category_specs(request, category_id):
 
 @login_required
 def inventory_list(request):
-    items = InventoryItem.objects.select_related('category').all()
-    categories = Category.objects.all()
+    # ✅ FILTER UTAMA: Hanya tampilkan item yang AKTIF
+    items = InventoryItem.objects.filter(is_active=True).select_related('category')
+    
+    # ✅ FILTER KATEGORI: Hanya tampilkan kategori yang AKTIF
+    categories = Category.objects.filter(is_active=True)
     selected_category_obj = None
 
     # 1. Filter Pencarian Teks
@@ -51,12 +43,10 @@ def inventory_list(request):
             Q(name__icontains=query) | Q(sku__icontains=query)
         )
 
-    # 2. Filter Kategori (Dirapikan)
+    # 2. Filter Kategori
     category_id = request.GET.get('category')
     if category_id:
-        # Filter items berdasarkan kategori
         items = items.filter(category_id=category_id)
-        # Ambil objek kategori untuk keperluan tampilan tabel dinamis
         selected_category_obj = Category.objects.filter(id=category_id).first()
 
     # 3. Filter Status Stok
@@ -77,6 +67,8 @@ def inventory_list(request):
 
 @login_required
 def inventory_detail(request, pk):
+    # Detail tetap bisa diakses meskipun non-aktif (untuk keperluan audit via URL langsung)
+    # Tapi kalau mau restrict, bisa tambah filter(is_active=True)
     item = get_object_or_404(InventoryItem, pk=pk)
     return render(request, 'inventory/inventory_detail.html', {'item': item})
 
@@ -88,7 +80,6 @@ def inventory_create(request):
         if form.is_valid():
             item = form.save() 
             
-            # --- LOG ACTIVITY ---
             log_activity(
                 request, 
                 action_type='CREATE', 
@@ -111,18 +102,24 @@ def inventory_create(request):
 @login_required
 def inventory_update(request, pk):
     item = get_object_or_404(InventoryItem, pk=pk)
+    
     if request.method == 'POST':
         form = InventoryForm(request.POST, instance=item)
+        
+        # Validasi "Satpam" stok ada di forms.py -> clean()
+        # Jadi kita cukup cek form.is_valid()
         if form.is_valid():
             item = form.save()
             
-            # --- LOG ACTIVITY ---
+            # Cek status untuk logging yang lebih jelas
+            status_msg = "Non-Aktif" if not item.is_active else "Aktif"
+            
             log_activity(
                 request, 
                 action_type='UPDATE', 
                 target_model='InventoryItem', 
                 target_id=item.pk, 
-                details=f"Mengupdate detail item: {item.name}"
+                details=f"Update item: {item.name}. Status sekarang: {status_msg}"
             )
 
             messages.success(request, "Item berhasil diperbarui!")
@@ -135,28 +132,8 @@ def inventory_update(request, pk):
         'title': f'Edit Item: {item.name}'
     })
 
-
-@owner_required 
-def inventory_delete(request, pk):
-    item = get_object_or_404(InventoryItem, pk=pk)
-    if request.method == 'POST':
-        item_name = item.name
-        item_pk = item.pk
-        
-        item.delete()
-        
-        # --- LOG ACTIVITY ---
-        log_activity(
-            request, 
-            action_type='DELETE', 
-            target_model='InventoryItem', 
-            target_id=item_pk, 
-            details=f"Menghapus permanent item: {item_name}"
-        )
-
-        messages.success(request, f'Item "{item_name}" telah dihapus.')
-        return redirect('inventory:inventory_list')
-    return render(request, 'inventory/inventory_confirm_delete.html', {'item': item})
+# ❌ VIEW DELETE SUDAH DIHAPUS 
+# Karena logic pindah ke inventory_update via status is_active
 
 # ==============================
 # CATEGORY VIEWS
@@ -164,7 +141,8 @@ def inventory_delete(request, pk):
 
 @login_required
 def category_list(request):
-    categories = Category.objects.all()
+    # ✅ Filter hanya kategori aktif
+    categories = Category.objects.filter(is_active=True)
     return render(request, 'inventory/category_list.html', {'categories': categories})
 
 
@@ -184,7 +162,6 @@ def category_form(request, pk=None):
         if form.is_valid():
             cat = form.save()
             
-            # --- LOG ACTIVITY ---
             log_activity(
                 request, 
                 action_type=action_type, 
@@ -200,25 +177,4 @@ def category_form(request, pk=None):
         
     return render(request, 'inventory/category_form.html', {'form': form, 'title': title})
 
-
-@owner_required
-def category_delete(request, pk):
-    category = get_object_or_404(Category, pk=pk)
-    if request.method == 'POST':
-        cat_name = category.name
-        cat_pk = category.pk
-        
-        category.delete()
-        
-        # --- LOG ACTIVITY ---
-        log_activity(
-            request, 
-            action_type='DELETE', 
-            target_model='Category', 
-            target_id=cat_pk, 
-            details=f"Menghapus kategori: {cat_name}"
-        )
-
-        messages.success(request, "Kategori berhasil dihapus!")
-        return redirect('inventory:category_list')
-    return render(request, 'inventory/category_confirm_delete.html', {'category': category})
+# ❌ VIEW CATEGORY DELETE SUDAH DIHAPUS

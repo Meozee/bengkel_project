@@ -36,7 +36,7 @@ django-filter==24.2
 # =======================
 python-escpos==3.0
 pyusb==1.2.1
-weasyprint==61.2
+weasyprint==63.1
 
 # =======================
 # Code Quality (Optional)
@@ -46,4 +46,3 @@ flake8==7.0.0
 isort==5.13.2
 
 
-weasyprint==61.2

@@ -11,6 +11,9 @@
 </div>
 
 <div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <small class="text-muted"><i class="bi bi-info-circle"></i> Hanya kategori aktif yang ditampilkan.</small>
+    </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover align-middle">
@@ -18,7 +21,8 @@
                     <tr>
                         <th style="width: 25%;">Nama Kategori</th>
                         <th style="width: 30%;">Deskripsi</th>
-                        <th style="width: 25%;">Spesifikasi Wajib (Custom Field)</th> <th class="text-end">Aksi</th>
+                        <th style="width: 25%;">Spesifikasi Wajib (Custom Field)</th> 
+                        <th class="text-end" style="width: 15%;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,18 +42,15 @@
                         </td>
 
                         <td class="text-end">
-                            <a href="{% url 'inventory:category_update' category.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
-                                <i class="bi bi-pencil"></i>
+                            <a href="{% url 'inventory:category_update' category.pk %}" class="btn btn-sm btn-outline-primary" title="Edit Detail atau Non-aktifkan">
+                                <i class="bi bi-pencil-square"></i> Edit
                             </a>
-                            <a href="{% url 'inventory:category_delete' category.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus">
-                                <i class="bi bi-trash"></i>
-                            </a>
-                        </td>
+                            </td>
                     </tr>
                     {% empty %}
                     <tr>
                         <td colspan="4" class="text-center py-4">
-                            <p class="text-muted">Belum ada kategori yang ditambahkan.</p>
+                            <p class="text-muted">Belum ada kategori aktif.</p>
                         </td>
                     </tr>
                     {% endfor %}

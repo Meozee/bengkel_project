@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load humanize %}
-{# Kita butuh custom template filter untuk mengambil data dictionary, nanti saya kasih di bawah #}
 
 {% block title %}Daftar Inventaris{% endblock %}
 
@@ -51,7 +50,7 @@
 
     <div class="card mb-4 shadow-sm">
         <div class="card-header">
-            <i class="fas fa-warehouse"></i> Daftar Item
+            <i class="fas fa-warehouse"></i> Daftar Item Aktif
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -64,24 +63,22 @@
                             
                             {% if selected_category_obj and selected_category_obj.required_specs %}
                                 {% with specs=selected_category_obj.required_specs %}
-                                    {# Kita perlu memecah string "Volume, SAE" jadi list di view atau template tag #}
-                                    {# TAPI CARA TERMUDAH: Kita parse string manual di sini pakai split #}
-                                    
-                                    {# Note: Django template split agak tricky tanpa custom tag, tapi mari coba cara aman #}
                                     <th class="table-info text-center" colspan="100%">Spesifikasi: {{ specs }}</th>
                                 {% endwith %}
                             {% endif %}
                             
                             <th>Stok</th>
                             <th>Harga Jual</th>
-                            <th>Aksi</th>
+                            <th style="width: 150px;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in items %}
                         <tr class="{% if item.is_low_stock %}table-danger{% endif %}">
                             <td>
-                                <a href="{% url 'inventory:inventory_detail' item.pk %}" class="fw-bold text-decoration-none">{{ item.name }}</a>
+                                <a href="{% url 'inventory:inventory_detail' item.pk %}" class="fw-bold text-decoration-none">
+                                    {{ item.name }}
+                                </a>
                                 {% if item.is_low_stock %}
                                     <span class="badge bg-danger ms-2" style="font-size: 0.7em;">Low Stock</span>
                                 {% endif %}
@@ -101,18 +98,21 @@
                                 </td>
                             {% endif %}
                             
-                            <td>{{ item.quantity }}</td>
-                            <td>Rp {{ item.sell_price|intcomma }}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'inventory:inventory_update' item.pk %}" class="btn btn-outline-warning">Edit</a>
-                                    <a href="{% url 'inventory:inventory_delete' item.pk %}" class="btn btn-outline-danger">Hapus</a>
-                                </div>
-                            </td>
+                            <td class="text-center">{{ item.quantity }}</td>
+                            <td class="text-end">Rp {{ item.sell_price|intcomma }}</td>
+                            <td class="text-center">
+                                <a href="{% url 'inventory:inventory_update' item.pk %}" class="btn btn-sm btn-outline-primary w-100">
+                                    <i class="fas fa-edit"></i> Edit / Status
+                                </a>
+                                </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center py-4 text-muted">Belum ada item inventaris.</td>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="fas fa-box-open fa-3x mb-3 text-secondary"></i><br>
+                                Tidak ada item aktif yang ditemukan.<br>
+                                <small>Cek filter atau tambahkan item baru.</small>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
