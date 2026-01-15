@@ -2,10 +2,28 @@
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 
+# --- PERUBAHAN 1: Tambahkan ActivityLog di sini ---
+from .models import CustomUser, ActivityLog 
 
+# =========================================================
+# BAGIAN BARU: AGAR ACTIVITY LOG MUNCUL DI ADMIN
+# =========================================================
+@admin.register(ActivityLog)
+class ActivityLogAdmin(admin.ModelAdmin):
+    # Kolom yang akan muncul di tabel list
+    list_display = ('timestamp', 'user', 'action_type', 'target_model', 'details')
+    # Filter samping untuk memudahkan pencarian
+    list_filter = ('action_type', 'target_model')
+    # Biar bisa dicari berdasarkan detail atau username
+    search_fields = ('details', 'user__username', 'target_model')
+    # Biar tidak bisa diedit sembarangan (Log harus murni)
+    readonly_fields = ('timestamp',)
+
+# =========================================================
+# BAGIAN LAMA (CustomUser): JANGAN DIUBAH, SUDAH BAGUS
+# =========================================================
 class CustomUserAdmin(UserAdmin):
     add_form = CustomUserCreationForm
     form = CustomUserChangeForm
@@ -75,6 +93,5 @@ class CustomUserAdmin(UserAdmin):
             ),
         }),
     )
-
 
 admin.site.register(CustomUser, CustomUserAdmin)

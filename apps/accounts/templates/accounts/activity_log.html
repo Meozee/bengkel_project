@@ -3,6 +3,9 @@
 {% block title %}Log Aktivitas{% endblock %}
 
 {% block content %}
+
+<div class="container-fluid px-4">
+
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
         <h1><i class="bi bi-journal-text me-2"></i> Log Aktivitas Sistem</h1>
@@ -122,9 +125,7 @@
         var activeTab = localStorage.getItem('activeLogTab');
         
         if (activeTab) {
-            // Cari tombol tab yang ID-nya sesuai
             var tabToActivate = document.querySelector('#' + activeTab);
-            // Jika ketemu, klik tombol itu
             if (tabToActivate) {
                 var tabInstance = new bootstrap.Tab(tabToActivate);
                 tabInstance.show();
@@ -135,7 +136,6 @@
         var tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
         tabEls.forEach(function(tabEl) {
             tabEl.addEventListener('shown.bs.tab', function (event) {
-                // Setiap kali user klik tab, simpan ID-nya ke memori
                 localStorage.setItem('activeLogTab', event.target.id);
             });
         });

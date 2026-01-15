@@ -68,23 +68,19 @@ class PurchaseOrderListView(LoginRequiredMixin, ListView):
    # apps/purchases/views.py
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['vendors'] = Vendor.objects.all()
-        context['statuses'] = PurchaseOrder.StatusChoices.choices
-        
-        # Kirim kembali nilai filter ke template agar input tidak reset
-        context['current_query'] = self.request.GET.get('q', '')
-        context['current_status'] = self.request.GET.get('status', '')
-        
-        # --- PERBAIKAN UTAMA ADA DISINI ---
-        # Cek dulu apakah vendor_param ada isinya sebelum di-convert ke int
-        vendor_param = self.request.GET.get('vendor')
-        context['current_vendor'] = int(vendor_param) if vendor_param else ''
-        # ----------------------------------
+            context = super().get_context_data(**kwargs)
+            context['vendors'] = Vendor.objects.all()
+            context['statuses'] = PurchaseOrder.StatusChoices.choices
+            
+            context['current_query'] = self.request.GET.get('q', '')
+            context['current_status'] = self.request.GET.get('status', '')
+            
+            vendor_param = self.request.GET.get('vendor')
+            context['current_vendor'] = int(vendor_param) if vendor_param else ''
 
-        context['start_date'] = self.request.GET.get('start_date', '')
-        context['end_date'] = self.request.GET.get('end_date', '')
-        return context
+            context['start_date'] = self.request.GET.get('start_date', '')
+            context['end_date'] = self.request.GET.get('end_date', '')
+            return context
 
 
 # --- VIEW BARU: DETAIL PO ---
