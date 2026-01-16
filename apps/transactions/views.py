@@ -484,9 +484,13 @@ def api_get_item_price(request, item_id):
         return JsonResponse({
             'success': True,
             'price': float(item.sell_price),
-            'stock': item.stock,
+            
+            # 🔥 PERBAIKAN DI SINI: ganti item.stock menjadi item.quantity
+            # (Key json tetap 'stock' tidak apa-apa, karena JS membacanya sebagai data.stock)
+            'stock': item.quantity, 
+            
             'name': item.name,
-            'unit': item.unit
+            # 'unit': item.unit # Pastikan model kamu punya field unit, kalau tidak hapus baris ini
         })
     except Exception as e:
         return JsonResponse({

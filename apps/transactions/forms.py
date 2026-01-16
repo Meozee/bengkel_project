@@ -59,13 +59,13 @@ class TransactionItemForm(forms.ModelForm):
             # Buat choices dengan format: (id, "Nama Item (Stok: X)")
             choices = [('', 'Pilih barang...')]
             for item in items:
-                stock_info = f" (Stok: {item.stock})" if item.stock > 0 else " (HABIS)"
+                # 🔥 PERBAIKAN DI SINI: ganti .stock menjadi .quantity
+                stock_info = f" (Stok: {item.quantity})" if item.quantity > 0 else " (HABIS)"
                 label = f"{item.name}{stock_info}"
                 choices.append((item.id, label))
             
             # Set choices ke field
             self.fields['item'].choices = choices
-
 
 class TransactionServiceForm(forms.ModelForm):
     class Meta:

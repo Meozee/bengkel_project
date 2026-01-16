@@ -7,9 +7,10 @@
 {% block content %}
 
 {% if form.errors %}
-    <div class="alert alert-danger">
-        <strong>Ups, ada error:</strong>
-        {{ form.errors }}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong><i class="fas fa-exclamation-triangle"></i> Terjadi Kesalahan:</strong>
+        Periksa kembali isian formulir di bawah ini.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 {% endif %}
 
@@ -18,152 +19,136 @@
 
     <div class="row">
         <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
                     <i class="fas fa-edit"></i> Detail Item
                 </div>
                 <div class="card-body">
-                    <form method="POST" id="inventoryForm">
+                    
+                    <form method="POST" id="inventoryForm" enctype="multipart/form-data">
                         {% csrf_token %}
 
                         {% if form.instance.pk %}
-                            <div class="row mb-3">
+                            <div class="row mb-3 p-2 bg-light rounded mx-1 border">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">Stok Saat Ini</label>
-                                    <input type="text" class="form-control" value="{{ form.instance.quantity }}" readonly disabled>
+                                    <label class="form-label text-muted small fw-bold text-uppercase">Stok Saat Ini</label>
+                                    <div class="fs-5 fw-bold text-dark">{{ form.instance.quantity }} Unit</div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Harga Modal (Avg)</label>
-                                    <input type="text" class="form-control" value="Rp {{ form.instance.buy_price|intcomma }}" readonly disabled>
+                                <div class="col-md-6 border-start">
+                                    <label class="form-label text-muted small fw-bold text-uppercase">Harga Beli Rata-rata</label>
+                                    <div class="fs-5 fw-bold text-success">Rp {{ form.instance.buy_price|intcomma }}</div>
                                 </div>
                             </div>
-                            <hr>
                         {% endif %}
-                       
+                        
                         {% crispy form %}
 
-                        <div class="d-flex justify-content-between mt-3">
-                            <a href="{% url 'inventory:inventory_list' %}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Batal
+                        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                            <a href="{% url 'inventory:inventory_list' %}" class="btn btn-secondary px-4">
+                                <i class="fas fa-arrow-left"></i> Kembali
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Simpan
+                            <button type="submit" class="btn btn-success px-4 fw-bold">
+                                <i class="fas fa-save"></i> Simpan Data
                             </button>
                         </div>
                     </form>
-                </div>
+                    </div>
             </div>
         </div>
-       
-        {% if not form.instance.pk %}
+        
         <div class="col-lg-4">
-            <div class="alert alert-info">
-                <h4 class="alert-heading"><i class="fas fa-info-circle"></i> Catatan</h4>
-                <p>Spesifikasi item akan muncul otomatis berdasarkan Kategori yang dipilih.</p>
+            <div class="alert alert-info shadow-sm">
+                <h5 class="alert-heading"><i class="fas fa-info-circle"></i> Petunjuk</h5>
                 <hr>
-                <p class="mb-0">Pastikan Anda sudah mengatur "Required Specs" di menu Kelola Kategori.</p>
+                <p class="mb-2"><strong>Spesifikasi Dinamis:</strong><br>
+                Form input tambahan akan muncul otomatis ketika Anda memilih <b>Kategori</b> yang memiliki aturan spesifikasi khusus (misal: Oli, Ban).</p>
+                
+                <p class="mb-0 text-muted small">
+                    * Pastikan SKU unik (tidak boleh sama dengan barang lain).
+                </p>
             </div>
         </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    // Menggunakan safe agar JSON ter-render dengan benar sebagai object JS
     const existingSpecs = {{ form.instance.extra_specs|default:"{}"|safe }};
 </script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. Inisialisasi Element
     const categorySelect = document.querySelector('select[name="category"]');
     const specsContainer = document.getElementById('dynamic_specs_container');
-   
-    // 🔥 SAFETY CHECK: Pastikan container ada
-    if (!specsContainer) {
-        console.error('❌ ERROR: Container "dynamic_specs_container" tidak ditemukan di HTML!');
-        return; // Stop script agar tidak error
-    }
+    
+    // Safety check
+    if (!categorySelect || !specsContainer) return;
 
-    if (!categorySelect) {
-        console.error('❌ ERROR: Select kategori tidak ditemukan!');
-        return;
-    }
-
-    console.log('✅ Script berhasil dijalankan. Container ditemukan:', specsContainer);
-   
-    // Fungsi Generate Input
+    // 2. Fungsi Generate Input HTML
     function generateInputs(specsList) {
-        specsContainer.innerHTML = '';
+        specsContainer.innerHTML = ''; // Reset container
 
         if (specsList.length === 0) {
-            specsContainer.innerHTML = '<p class="text-muted fst-italic small">Tidak ada spesifikasi khusus untuk kategori ini.</p>';
+            specsContainer.innerHTML = '<p class="text-muted fst-italic small mb-0"><i class="fas fa-check-circle"></i> Tidak ada spesifikasi khusus untuk kategori ini.</p>';
+            specsContainer.classList.remove('p-3', 'border'); // Hapus border biar rapi
             return;
         }
 
-        // 🔥 Tambahkan header untuk section spesifikasi
+        specsContainer.classList.add('p-3', 'border'); // Tambah border
+        
+        // Header Section
         const header = document.createElement('div');
-        header.className = 'mb-3';
-        header.innerHTML = '<h6 class="text-primary"><i class="fas fa-cogs"></i> Spesifikasi Khusus</h6><hr>';
+        header.innerHTML = '<h6 class="text-primary fw-bold mb-3"><i class="fas fa-sliders-h"></i> Spesifikasi Khusus</h6>';
         specsContainer.appendChild(header);
 
+        // Loop membuat input
         specsList.forEach(label => {
+            const cleanLabel = label.trim();
+            const inputName = 'spec_' + cleanLabel; // Prefix spec_ agar mudah ditangkap di Views
+            const oldValue = existingSpecs[cleanLabel] || ''; // Isi value lama jika ada
+
             const wrapper = document.createElement('div');
             wrapper.className = 'mb-3';
-           
-            const cleanLabel = label.trim();
-            const inputName = 'spec_' + cleanLabel;
-           
-            // Ambil value lama jika ada (Mode Edit)
-            const oldValue = existingSpecs[cleanLabel] || '';
-
             wrapper.innerHTML = `
-                <label class="form-label">${cleanLabel}</label>
-                <input type="text" name="${inputName}" class="form-control" value="${oldValue}" placeholder="Masukkan ${cleanLabel}">
+                <label class="form-label fw-bold small text-secondary">${cleanLabel}</label>
+                <input type="text" name="${inputName}" class="form-control" 
+                       value="${oldValue}" placeholder="Isi ${cleanLabel}...">
             `;
             specsContainer.appendChild(wrapper);
         });
-
-        console.log(`✅ Berhasil generate ${specsList.length} input spesifikasi`);
     }
 
-    // Fungsi Fetch API
+    // 3. Fungsi Fetch Data dari API Django
     function fetchAndRenderSpecs() {
         const categoryId = categorySelect.value;
-       
-        // Jika kategori kosong (misal pilih "---------"), bersihkan container
+        
         if (!categoryId) {
             specsContainer.innerHTML = '';
             return;
         }
 
-        console.log('🔍 Fetching specs untuk category ID:', categoryId);
+        // Tampilkan loading state
+        specsContainer.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Memuat spesifikasi...</div>';
 
-        // Panggil API Backend
         fetch(`/inventory/api/get-category-specs/${categoryId}/`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
+            .then(res => res.json())
             .then(data => {
-                console.log('📦 Data specs diterima:', data);
                 generateInputs(data.specs);
             })
-            .catch(error => {
-                console.error('❌ Error fetching specs:', error);
-                specsContainer.innerHTML = '<p class="text-danger small"><i class="fas fa-exclamation-triangle"></i> Gagal memuat spesifikasi.</p>';
+            .catch(err => {
+                console.error(err);
+                specsContainer.innerHTML = '<div class="text-danger small">Gagal memuat spesifikasi.</div>';
             });
     }
 
-    // Event Listeners
+    // 4. Pasang Event Listener
     categorySelect.addEventListener('change', fetchAndRenderSpecs);
-    
-    // Trigger saat halaman load (Jika sedang Edit atau browser mengingat pilihan)
+
+    // 5. Trigger saat halaman pertama kali load (untuk Edit Mode)
     if (categorySelect.value) {
-        console.log('🔄 Kategori sudah terpilih saat page load, fetching specs...');
         fetchAndRenderSpecs();
     }
 });
