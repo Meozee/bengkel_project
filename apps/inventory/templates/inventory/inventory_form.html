@@ -5,6 +5,14 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
+
+{% if form.errors %}
+    <div class="alert alert-danger">
+        <strong>Ups, ada error:</strong>
+        {{ form.errors }}
+    </div>
+{% endif %}
+
 <div class="container-fluid px-4">
     <h1 class="mt-4">{{ title }}</h1>
 
@@ -31,7 +39,7 @@
                             </div>
                             <hr>
                         {% endif %}
-                        
+                       
                         {% crispy form %}
 
                         <div class="d-flex justify-content-between mt-3">
@@ -46,7 +54,7 @@
                 </div>
             </div>
         </div>
-        
+       
         {% if not form.instance.pk %}
         <div class="col-lg-4">
             <div class="alert alert-info">
@@ -70,45 +78,67 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const categorySelect = document.querySelector('select[name="category"]');
-    // NOTE: ID 'dynamic_specs_container' ini harus didefinisikan di forms.py (Helper Layout)
     const specsContainer = document.getElementById('dynamic_specs_container');
-    
+   
+    // 🔥 SAFETY CHECK: Pastikan container ada
+    if (!specsContainer) {
+        console.error('❌ ERROR: Container "dynamic_specs_container" tidak ditemukan di HTML!');
+        return; // Stop script agar tidak error
+    }
+
+    if (!categorySelect) {
+        console.error('❌ ERROR: Select kategori tidak ditemukan!');
+        return;
+    }
+
+    console.log('✅ Script berhasil dijalankan. Container ditemukan:', specsContainer);
+   
     // Fungsi Generate Input
     function generateInputs(specsList) {
-        specsContainer.innerHTML = ''; 
+        specsContainer.innerHTML = '';
 
         if (specsList.length === 0) {
-            specsContainer.innerHTML = '<p class="text-muted fst-italic small">Tidak ada spesifikasi khusus.</p>';
+            specsContainer.innerHTML = '<p class="text-muted fst-italic small">Tidak ada spesifikasi khusus untuk kategori ini.</p>';
             return;
         }
+
+        // 🔥 Tambahkan header untuk section spesifikasi
+        const header = document.createElement('div');
+        header.className = 'mb-3';
+        header.innerHTML = '<h6 class="text-primary"><i class="fas fa-cogs"></i> Spesifikasi Khusus</h6><hr>';
+        specsContainer.appendChild(header);
 
         specsList.forEach(label => {
             const wrapper = document.createElement('div');
             wrapper.className = 'mb-3';
-            
+           
             const cleanLabel = label.trim();
-            const inputName = 'spec_' + cleanLabel; 
-            
+            const inputName = 'spec_' + cleanLabel;
+           
             // Ambil value lama jika ada (Mode Edit)
             const oldValue = existingSpecs[cleanLabel] || '';
 
             wrapper.innerHTML = `
                 <label class="form-label">${cleanLabel}</label>
-                <input type="text" name="${inputName}" class="textinput form-control" value="${oldValue}">
+                <input type="text" name="${inputName}" class="form-control" value="${oldValue}" placeholder="Masukkan ${cleanLabel}">
             `;
             specsContainer.appendChild(wrapper);
         });
+
+        console.log(`✅ Berhasil generate ${specsList.length} input spesifikasi`);
     }
 
     // Fungsi Fetch API
     function fetchAndRenderSpecs() {
         const categoryId = categorySelect.value;
-        
+       
         // Jika kategori kosong (misal pilih "---------"), bersihkan container
         if (!categoryId) {
             specsContainer.innerHTML = '';
             return;
         }
+
+        console.log('🔍 Fetching specs untuk category ID:', categoryId);
 
         // Panggil API Backend
         fetch(`/inventory/api/get-category-specs/${categoryId}/`)
@@ -119,22 +149,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
+                console.log('📦 Data specs diterima:', data);
                 generateInputs(data.specs);
             })
             .catch(error => {
-                console.error('Error fetching specs:', error);
-                specsContainer.innerHTML = '<p class="text-danger small">Gagal memuat spesifikasi.</p>';
+                console.error('❌ Error fetching specs:', error);
+                specsContainer.innerHTML = '<p class="text-danger small"><i class="fas fa-exclamation-triangle"></i> Gagal memuat spesifikasi.</p>';
             });
     }
 
     // Event Listeners
-    if (categorySelect) {
-        categorySelect.addEventListener('change', fetchAndRenderSpecs);
-        
-        // Trigger saat halaman load (Jika sedang Edit atau browser mengingat pilihan)
-        if (categorySelect.value) {
-            fetchAndRenderSpecs();
-        }
+    categorySelect.addEventListener('change', fetchAndRenderSpecs);
+    
+    // Trigger saat halaman load (Jika sedang Edit atau browser mengingat pilihan)
+    if (categorySelect.value) {
+        console.log('🔄 Kategori sudah terpilih saat page load, fetching specs...');
+        fetchAndRenderSpecs();
     }
 });
 </script>

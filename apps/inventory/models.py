@@ -1,12 +1,13 @@
 from decimal import Decimal
 from django.db import models
 
+
 class Category(models.Model):
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True)
     required_specs = models.CharField(
-        max_length=500, 
-        blank=True, 
+        max_length=500,
+        blank=True,
         help_text="Masukkan nama spesifikasi dipisahkan koma. Contoh: Volume, SAE, Type"
     )
     # ✅ SOFT DELETE FIELD
@@ -36,19 +37,20 @@ class InventoryItem(models.Model):
     quantity = models.PositiveIntegerField(default=0)
     reorder_threshold = models.PositiveIntegerField(default=10)
     
-    extra_specs = models.JSONField(default=dict, blank=True)
+    # 🔥 FIX: Tambahkan null=True untuk backward compatibility
+    extra_specs = models.JSONField(default=dict, blank=True, null=True)
 
     # ✅ SOFT DELETE FIELD
     is_active = models.BooleanField(default=True, help_text="Jika Non-Aktif, item tidak akan muncul di list penjualan.")
 
     def __str__(self):
-        return f"{self.name} ({self.sku})"
+        return f"{self.name} ({self.sku or 'No SKU'})"
 
     @property
     def is_low_stock(self):
         return self.quantity <= self.reorder_threshold
 
-# Model InventoryLog tetap sama seperti sebelumnya
+
 class InventoryLog(models.Model):
     item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name='logs')
     change = models.IntegerField()

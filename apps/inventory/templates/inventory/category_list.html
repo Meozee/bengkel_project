@@ -1,18 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}Daftar Kategori{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-tags"></i> Daftar Kategori</h1>
+<div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+    <h1><i class="bi bi-tags"></i> Manajemen Kategori</h1>
     <a href="{% url 'inventory:category_add' %}" class="btn btn-primary">
         <i class="bi bi-plus-circle"></i> Tambah Kategori Baru
     </a>
 </div>
 
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item">
+    <a class="nav-link {% if current_status == 'active' %}active fw-bold{% endif %}" 
+       href="?status=active">
+       <i class="bi bi-check-circle-fill text-success"></i> Aktif
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if current_status == 'archived' %}active fw-bold{% endif %}" 
+       href="?status=archived">
+       <i class="bi bi-archive-fill text-secondary"></i> Arsip (Non-Aktif)
+    </a>
+  </li>
+</ul>
+
 <div class="card shadow-sm">
     <div class="card-header bg-white">
-        <small class="text-muted"><i class="bi bi-info-circle"></i> Hanya kategori aktif yang ditampilkan.</small>
+        <small class="text-muted">
+            {% if current_status == 'active' %}
+                <i class="bi bi-info-circle"></i> Menampilkan kategori yang bisa digunakan.
+            {% else %}
+                <i class="bi bi-info-circle"></i> Menampilkan kategori yang disembunyikan (Arsip). Edit untuk mengaktifkan kembali.
+            {% endif %}
+        </small>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -21,36 +42,54 @@
                     <tr>
                         <th style="width: 25%;">Nama Kategori</th>
                         <th style="width: 30%;">Deskripsi</th>
-                        <th style="width: 25%;">Spesifikasi Wajib (Custom Field)</th> 
+                        <th style="width: 25%;">Spesifikasi Wajib</th> 
                         <th class="text-end" style="width: 15%;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for category in categories %}
-                    <tr>
-                        <td><strong>{{ category.name }}</strong></td>
+                    <tr class="{% if not category.is_active %}table-secondary{% endif %}">
+                        <td>
+                            <strong>{{ category.name }}</strong>
+                            {% if not category.is_active %}
+                                <span class="badge bg-secondary ms-2">Non-Aktif</span>
+                            {% endif %}
+                        </td>
                         <td>{{ category.description|default:"-" }}</td>
                         
                         <td>
                             {% if category.required_specs %}
-                                {% for spec in category.required_specs.split|slice:":5" %} 
+                                {% for spec in category.required_specs.split|slice:":3" %} 
                                     <span class="badge bg-info text-dark">{{ spec }}</span>
                                 {% endfor %}
+                                {% if category.required_specs.split|length > 3 %}
+                                    <span class="badge bg-light text-dark">+{{ category.required_specs.split|length|add:"-3" }}</span>
+                                {% endif %}
                             {% else %}
                                 <span class="text-muted fst-italic small">Tidak ada</span>
                             {% endif %}
                         </td>
 
                         <td class="text-end">
-                            <a href="{% url 'inventory:category_update' category.pk %}" class="btn btn-sm btn-outline-primary" title="Edit Detail atau Non-aktifkan">
-                                <i class="bi bi-pencil-square"></i> Edit
+                            <a href="{% url 'inventory:category_update' category.pk %}" 
+                               class="btn btn-sm {% if current_status == 'archived' %}btn-success{% else %}btn-outline-primary{% endif %}" 
+                               title="Edit Detail atau Ubah Status">
+                                
+                                {% if current_status == 'archived' %}
+                                    <i class="bi bi-arrow-counterclockwise"></i> Pulihkan / Edit
+                                {% else %}
+                                    <i class="bi bi-pencil-square"></i> Edit
+                                {% endif %}
                             </a>
-                            </td>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="text-center py-4">
-                            <p class="text-muted">Belum ada kategori aktif.</p>
+                        <td colspan="4" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="bi bi-folder-x fa-2x mb-2"></i>
+                                <p>Tidak ada data di tab ini.</p>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -58,11 +97,5 @@
             </table>
         </div>
     </div>
-</div>
-
-<div class="mt-4">
-    <a href="{% url 'inventory:inventory_list' %}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Kembali ke Daftar Inventaris
-    </a>
 </div>
 {% endblock %}
