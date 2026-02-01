@@ -25,6 +25,8 @@ from .forms import TransactionForm, TransactionItemFormSet, TransactionServiceFo
 from apps.inventory.models import InventoryItem
 from apps.master_data.models import Service
 
+from django.core.paginator import Paginator
+
 
 # ====================================================================
 # LIST & DETAIL VIEWS
@@ -33,9 +35,12 @@ from apps.master_data.models import Service
 @login_required
 def transaction_list(request):
     """Menampilkan daftar transaksi dengan filter lengkap."""
-    txns = Transaction.objects.select_related('customer', 'vehicle', 'mechanic').all()
+    # 1. Optimasi Query: select_related (1-to-1/FK) dan prefetch_related (M2M/Reverse FK)
+    # Ini krusial agar CPU Docker tidak 100% karena N+1 queries.
+    txns = Transaction.objects.select_related('customer', 'vehicle', 'mechanic')\
+                              .prefetch_related('items__item', 'services__service').all()
     
-    # 1. Filter Keyword
+    # 2. Filter Keyword
     customer_name = request.GET.get('customer_name')
     if customer_name:
         txns = txns.filter(customer__name__icontains=customer_name)
@@ -48,12 +53,12 @@ def transaction_list(request):
     if license_plate:
         txns = txns.filter(vehicle__license_plate__icontains=license_plate)
 
-    # 2. Filter Status
+    # 3. Filter Status
     status = request.GET.get('status')
     if status:
         txns = txns.filter(status=status)
 
-    # 3. Filter Tanggal
+    # 4. Filter Tanggal
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
     
@@ -65,11 +70,15 @@ def transaction_list(request):
         except ValueError:
             pass
 
-    # Order by terbaru
+    # 5. Order & Pagination (PENTING: Order dulu baru Paginate)
     txns = txns.order_by('-created_at')
+    
+    paginator = Paginator(txns, 10) # Tampilkan 10 data saja per halaman
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     context = {
-        'transactions': txns,
+        'transactions': page_obj,  # GUNAKAN page_obj agar HTML hanya merender 10 baris
         'filter_customer': customer_name or '',
         'filter_mechanic': mechanic_name or '',
         'filter_plate': license_plate or '',

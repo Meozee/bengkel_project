@@ -181,3 +181,7 @@ ESC_POS_PRINTER = {
     'VID': 0x0483,
     'PID': 0x070b,
 }
+
+DEBUG_TOOLBAR_CONFIG = {
+    'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
+}
