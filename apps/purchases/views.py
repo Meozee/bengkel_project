@@ -67,7 +67,23 @@ class PurchaseOrderListView(LoginRequiredMixin, ListView):
         context['current_status'] = self.request.GET.get('status', '')
        
         vendor_param = self.request.GET.get('vendor')
-        context['current_vendor'] = int(vendor_param) if vendor_param else ''
+        context['current_vendor'] = int(vendor_param) if vendor_param else 0
+        
+        # Build vendor_selected dict to avoid template comparison syntax error
+        context['vendor_selected'] = {}
+        if vendor_param:
+            try:
+                context['vendor_selected'][int(vendor_param)] = True
+            except (ValueError, TypeError):
+                pass
+        
+        # Build status_selected dict
+        context['status_selected'] = {}
+        status_param = self.request.GET.get('status')
+        if status_param:
+            context['status_selected'][status_param] = True
+        
+        return context
 
         context['start_date'] = self.request.GET.get('start_date', '')
         context['end_date'] = self.request.GET.get('end_date', '')
@@ -110,6 +126,17 @@ def update_status(request, pk, new_status):
     # VALIDASI 3: Tidak boleh COMPLETED → PENDING (tidak masuk akal)
     if po.status == PurchaseOrder.StatusChoices.COMPLETED and new_status == PurchaseOrder.StatusChoices.PENDING:
         messages.error(request, "Tidak bisa mengubah status COMPLETED kembali ke PENDING.")
+        return redirect('purchases:purchase_list')
+
+    # VALIDASI 4 (BARU): Barang tidak boleh sudah dipakai di transaksi saat membatalkan
+    if new_status == PurchaseOrder.StatusChoices.CANCELLED and po.has_items_used_in_transactions():
+        used_items = po.get_items_used_in_transactions_detail()
+        items_str = ", ".join([f"{item['item__name']} ({item['total_qty_used']} qty)" for item in used_items])
+        messages.error(
+            request,
+            f"❌ TIDAK BISA MEMBATALKAN! Barang dari PO #{po.id} sudah dipakai di transaksi: {items_str}. "
+            f"Silakan batalkan transaksi terlebih dahulu sebelum membatalkan PO."
+        )
         return redirect('purchases:purchase_list')
 
     try:
@@ -187,11 +214,14 @@ class PurchaseOrderDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteVie
         - User harus Owner
         - PO harus status PENDING
         - Jika COMPLETED/CANCELLED → DILARANG HAPUS (gunakan Cancel untuk revert)
+        - BARANG TIDAK BOLEH SUDAH DIPAKAI DI TRANSAKSI
         """
         po = self.get_object()
         is_owner = self.request.user.role == CustomUser.RoleChoices.OWNER
         is_pending = po.status == PurchaseOrder.StatusChoices.PENDING
-        return is_owner and is_pending
+        # CEK BARU: Barang tidak boleh sudah dipakai di transaksi
+        items_not_used = not po.has_items_used_in_transactions()
+        return is_owner and is_pending and items_not_used
    
     def handle_no_permission(self):
         po = self.get_object()
@@ -203,6 +233,15 @@ class PurchaseOrderDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteVie
                 f"DILARANG MENGHAPUS! PO #{po.id} statusnya '{po.get_status_display()}'. "
                 f"Gunakan tombol 'Batalkan/Cancel' untuk mengembalikan stok secara aman."
             )
+        elif po.has_items_used_in_transactions():
+            # CEK BARU: Barang sudah dipakai di transaksi
+            used_items = po.get_items_used_in_transactions_detail()
+            items_str = ", ".join([f"{item['item__name']} ({item['total_qty_used']} qty)" for item in used_items])
+            messages.error(
+                self.request,
+                f"❌ TIDAK BISA DIHAPUS! Barang dari PO #{po.id} sudah dipakai di transaksi: {items_str}. "
+                f"Silakan batalkan transaksi terlebih dahulu sebelum menghapus PO."
+            )
        
         return redirect('purchases:purchase_list')
 
@@ -210,6 +249,16 @@ class PurchaseOrderDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteVie
         # Double check status saat tombol konfirmasi ditekan
         if self.object.status != PurchaseOrder.StatusChoices.PENDING:
             messages.error(self.request, "Tidak bisa menghapus PO yang sudah diproses.")
+            return redirect('purchases:purchase_list')
+        
+        # CEK BARU: Barang tidak boleh sudah dipakai di transaksi
+        if self.object.has_items_used_in_transactions():
+            used_items = self.object.get_items_used_in_transactions_detail()
+            items_str = ", ".join([f"{item['item__name']} ({item['total_qty_used']} qty)" for item in used_items])
+            messages.error(
+                self.request,
+                f"❌ Gagal menghapus! Barang dari PO #{self.object.id} sudah dipakai di transaksi: {items_str}"
+            )
             return redirect('purchases:purchase_list')
 
         po_id = self.object.id

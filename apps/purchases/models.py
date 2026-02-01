@@ -53,6 +53,51 @@ class PurchaseOrder(models.Model):
             return self.purchaser_mechanic.name
         return self.purchaser_custom or "-"
 
+    def get_items_used_in_transactions(self):
+        """
+        Cek apakah barang-barang dari PO ini sudah digunakan di transaksi.
+        Return: Dict dengan item_id, item_name, dan qty yang sudah dipakai
+        """
+        from apps.transactions.models import TransactionItem, Transaction
+        
+        # Ambil semua item yang ada di PO ini
+        po_item_ids = self.items.values_list('item_id', flat=True)
+        
+        # Cari di transaksi yang PENDING atau COMPLETED (transaksi aktif)
+        used_items = TransactionItem.objects.filter(
+            item_id__in=po_item_ids,
+            transaction__status__in=[Transaction.StatusChoices.PENDING, Transaction.StatusChoices.COMPLETED]
+        ).select_related('item', 'transaction').values('item_id', 'item__name').distinct()
+        
+        return list(used_items)
+
+    def has_items_used_in_transactions(self):
+        """
+        Check apakah ada barang dari PO yang sudah dipakai di transaksi aktif.
+        Return: True jika ada, False jika tidak
+        """
+        return len(self.get_items_used_in_transactions()) > 0
+
+    def get_items_used_in_transactions_detail(self):
+        """
+        Get detail lengkap barang yang sudah dipakai beserta jumlahnya.
+        Return: List of dict dengan item info dan qty yang dipakai
+        """
+        from apps.transactions.models import TransactionItem, Transaction
+        from django.db.models import Sum
+        
+        po_item_ids = self.items.values_list('item_id', flat=True)
+        
+        # Agregasi: total qty per item di transaksi aktif
+        used_summary = TransactionItem.objects.filter(
+            item_id__in=po_item_ids,
+            transaction__status__in=[Transaction.StatusChoices.PENDING, Transaction.StatusChoices.COMPLETED]
+        ).values('item_id', 'item__name').annotate(
+            total_qty_used=Sum('quantity')
+        ).order_by('item__name')
+        
+        return list(used_summary)
+
 
 class PurchaseOrderItem(models.Model):
     """
