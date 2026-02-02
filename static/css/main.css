@@ -1,574 +1,444 @@
 /* ========================================
    BENGKEL MANAGEMENT - MAIN STYLESHEET
-   Elegant Black Theme with Smooth Animations
+   Global Styles, Layout, & Animations
    ======================================== */
 
-/* ===== ROOT VARIABLES ===== */
+/* ===== 1. ROOT VARIABLES & RESET ===== */
 :root {
-   --bg-main: #f8f9fa;
-   --sidebar-bg: #000000;
-   --sidebar-text: #b0b0b0;
-   --sidebar-text-active: #ffffff;
-   --sidebar-hover: #1a1a1a;
-   --accent-red: #dc3545;
-   --accent-red-hover: #c82333;
-   --text-primary: #2c3e50;
-   --border-color: #dee2e6;
-   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
-   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
-   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --bg-main: #f8f9fa;
+    --sidebar-bg: #000000;
+    --sidebar-width: 260px; /* Lebar Sidebar Global */
+    --sidebar-text: #b0b0b0;
+    --sidebar-text-active: #ffffff;
+    --sidebar-hover: #1a1a1a;
+    --accent-red: #dc3545;
+    --accent-red-hover: #c82333;
+    --text-primary: #2c3e50;
+    --border-color: #dee2e6;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ===== GLOBAL RESET ===== */
-* {
-   margin: 0;
-   padding: 0;
-   box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-   background-color: var(--bg-main);
-   overflow-x: hidden;
-   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-   color: var(--text-primary);
-   line-height: 1.6;
+    background-color: var(--bg-main);
+    overflow-x: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-primary);
+    line-height: 1.6;
 }
 
-/* ===================================
-   LAYOUT UTAMA (FIXED SIDEBAR)
-   =================================== */
-
+/* ===== 2. WRAPPER & SIDEBAR LAYOUT ===== */
 #wrapper {
-   display: flex;
-   min-height: 100vh;
-   width: 100%;
+    display: flex;
+    width: 100%;
+    overflow-x: hidden;
+    transition: var(--transition-smooth);
 }
 
-/* SIDEBAR - FIXED POSITION */
+/* Sidebar Styling */
 #sidebar-wrapper {
-   width: 260px;
-   min-width: 260px;
-   max-width: 260px;
-   background: linear-gradient(180deg, #000000 0%, #1a1a1a 100%);
-   height: 100vh;
-   position: fixed;
-   top: 0;
-   left: 0;
-   overflow-y: hidden;
-   /* TIDAK BISA SCROLL */
-   overflow-x: hidden;
-   z-index: 1000;
-   transition: var(--transition-smooth);
-   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
-   display: flex;
-   flex-direction: column;
+    min-height: 100vh;
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width); /* Prevent shrinking */
+    margin-left: calc(var(--sidebar-width) * -1); /* Hidden by default on mobile */
+    background: linear-gradient(180deg, #000000 0%, #1a1a1a 100%);
+    position: fixed;
+    z-index: 1000;
+    height: 100%;
+    overflow-y: auto;
+    transition: margin 0.25s ease-out;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.3);
 }
 
-/* PAGE CONTENT - DENGAN MARGIN KIRI */
+/* Content Wrapper */
 #page-content-wrapper {
-   flex: 1;
-   width: 100%;
-   margin-left: 260px;
-   transition: var(--transition-smooth);
-   min-height: 100vh;
-   display: flex;
-   flex-direction: column;
+    width: 100%;
+    min-width: 100vw;
+    transition: margin 0.25s ease-out;
 }
 
-/* TOGGLE STATE (Mobile) */
+/* --- LOGIKA TOGGLE (Mobile vs Desktop) --- */
+
+/* Mobile: Default Hidden (sudah di atas), Toggled = Show */
 #wrapper.toggled #sidebar-wrapper {
-   margin-left: -260px;
+    margin-left: 0;
 }
 
-#wrapper.toggled #page-content-wrapper {
-   margin-left: 0;
+/* Desktop Styles */
+@media (min-width: 768px) {
+    #sidebar-wrapper {
+        margin-left: 0; /* Show by default on desktop */
+    }
+    
+    #page-content-wrapper {
+        min-width: 0;
+        width: 100%;
+        margin-left: var(--sidebar-width); /* Push content */
+    }
+    
+    /* Desktop Toggled = Minimize/Hide */
+    #wrapper.toggled #sidebar-wrapper {
+        margin-left: calc(var(--sidebar-width) * -1);
+    }
+    
+    #wrapper.toggled #page-content-wrapper {
+        margin-left: 0;
+    }
 }
 
-/* ===================================
-   SIDEBAR COMPONENTS
-   =================================== */
-
-/* LOGO AREA */
+/* ===== 3. SIDEBAR COMPONENTS ===== */
 .sidebar-heading {
-   padding: 1.5rem 1rem;
-   text-align: center;
-   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-   background: rgba(255, 255, 255, 0.03);
-   flex-shrink: 0;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .sidebar-logo {
-   max-width: 120px;
-   height: auto;
-   display: block;
-   margin: 0 auto;
-   filter: brightness(1.1);
-   transition: transform 0.3s ease;
+    max-width: 120px;
+    height: auto;
+    transition: transform 0.3s ease;
 }
-
-.sidebar-logo:hover {
-   transform: scale(1.05);
-}
+.sidebar-logo:hover { transform: scale(1.05); }
 
 .brand-text {
-   color: var(--sidebar-text-active);
-   font-size: 0.85rem;
-   font-weight: 600;
-   letter-spacing: 1px;
-   text-transform: uppercase;
-   margin-top: 0.5rem;
+    color: var(--sidebar-text-active);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 0.5rem;
 }
 
-/* NAVIGATION MENU */
-.list-group {
-   width: 100%;
-   padding: 1rem 0.75rem;
-   flex: 1;
-   overflow-y: auto;
-   /* Menu bisa scroll jika terlalu banyak */
-   overflow-x: hidden;
-}
-
-/* Custom Scrollbar untuk Menu */
-.list-group::-webkit-scrollbar {
-   width: 4px;
-}
-
-.list-group::-webkit-scrollbar-track {
-   background: rgba(255, 255, 255, 0.05);
-}
-
-.list-group::-webkit-scrollbar-thumb {
-   background: rgba(255, 255, 255, 0.2);
-   border-radius: 2px;
-}
-
-.list-group::-webkit-scrollbar-thumb:hover {
-   background: rgba(255, 255, 255, 0.3);
-}
-
-/* MENU ITEMS */
 .list-group-item {
-   background-color: transparent;
-   color: var(--sidebar-text);
-   border: none;
-   padding: 0.85rem 1rem;
-   margin-bottom: 0.4rem;
-   border-radius: 10px;
-   transition: var(--transition-smooth);
-   position: relative;
-   overflow: hidden;
-   display: flex;
-   align-items: center;
-   cursor: pointer;
-   font-size: 0.95rem;
-   font-weight: 500;
+    background-color: transparent;
+    color: var(--sidebar-text);
+    border: none;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.4rem;
+    border-radius: 10px;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    font-weight: 500;
 }
 
-/* ICON STYLING */
 .list-group-item i {
-   width: 28px;
-   font-size: 1.1rem;
-   margin-right: 0.75rem;
-   transition: var(--transition-smooth);
-   flex-shrink: 0;
+    width: 28px;
+    font-size: 1.1rem;
+    margin-right: 0.75rem;
+    transition: var(--transition-smooth);
 }
 
-.list-group-item span {
-   flex: 1;
-   white-space: nowrap;
-   overflow: hidden;
-   text-overflow: ellipsis;
-}
-
-/* HOVER EFFECT - ZOOM & SHIFT */
+/* Sidebar Hover & Active */
 .list-group-item:hover {
-   background-color: var(--sidebar-hover);
-   color: var(--sidebar-text-active);
-   transform: scale(1.05) translateX(8px);
-   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-   padding-left: 1.2rem;
+    background-color: var(--sidebar-hover);
+    color: var(--sidebar-text-active);
+    padding-left: 1.2rem;
 }
+.list-group-item:hover i { color: var(--accent-red); transform: scale(1.1); }
 
-.list-group-item:hover i {
-   color: var(--accent-red);
-   transform: scale(1.1);
-}
-
-/* ACTIVE STATE - RED INDICATOR */
 .list-group-item.active {
-   background: linear-gradient(90deg, rgba(220, 53, 69, 0.15) 0%, rgba(220, 53, 69, 0.05) 100%);
-   color: var(--sidebar-text-active);
-   font-weight: 600;
-   border-left: 4px solid var(--accent-red);
-   padding-left: 1.5rem;
-   box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
-   transform: scale(1.02);
+    background: linear-gradient(90deg, rgba(220, 53, 69, 0.15) 0%, rgba(220, 53, 69, 0.05) 100%);
+    color: var(--sidebar-text-active);
+    font-weight: 600;
+    border-left: 4px solid var(--accent-red);
+    padding-left: 1.5rem;
 }
+.list-group-item.active i { color: var(--accent-red); }
 
-.list-group-item.active i {
-   color: var(--accent-red);
-}
-
-.list-group-item.active::before {
-   content: '';
-   position: absolute;
-   left: 0;
-   top: 50%;
-   transform: translateY(-50%);
-   width: 4px;
-   height: 60%;
-   background: var(--accent-red);
-   border-radius: 0 2px 2px 0;
-}
-
-/* MENU DIVIDER */
 .menu-divider {
-   margin: 1.5rem 0 1rem 0;
-   padding: 0 1rem;
-   border-top: 1px solid rgba(255, 255, 255, 0.1);
-   padding-top: 1rem;
+    margin: 1.5rem 0 1rem 0;
+    padding: 1rem 1rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
-
 .menu-divider span {
-   color: rgba(255, 255, 255, 0.4);
-   font-size: 0.75rem;
-   font-weight: 700;
-   text-transform: uppercase;
-   letter-spacing: 1.5px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
 }
 
-/* ===================================
-   NAVBAR STYLING
-   =================================== */
+/* ===== 4. NAVBAR CUSTOM & HEADER ANIMATION ===== */
 
-.navbar {
-   background: #ffffff !important;
-   box-shadow: var(--shadow-sm);
-   padding: 0.75rem 1.5rem;
-   border-bottom: 1px solid var(--border-color);
-   position: sticky;
-   top: 0;
-   z-index: 999;
+/* Base Navbar */
+.navbar-custom {
+    height: 180px; 
+    padding: 0;
+    position: relative;
+    background: #000000;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    overflow: visible; /* Dropdown visible */
 }
 
-.navbar-light .navbar-nav .nav-link {
-   color: var(--text-primary);
-   padding: 0.5rem 1rem;
-   transition: var(--transition-smooth);
-   border-radius: 8px;
+/* Layering System */
+.anim-layer {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0;
+    overflow: hidden; /* Animasi motor terpotong rapi */
 }
 
-.navbar-light .navbar-nav .nav-link:hover {
-   background-color: rgba(0, 0, 0, 0.05);
-   color: #000000;
+.content-layer {
+    position: relative;
+    z-index: 10;
+    height: 100%;
+    width: 100%;
+    pointer-events: none;
 }
 
-/* USER AVATAR */
+/* Navbar Text Colors & States */
+.navbar-custom .nav-link { 
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+.navbar-custom .nav-link:hover, 
+.navbar-custom .nav-link:focus,
+.navbar-custom .nav-link.show { 
+    color: #ffffff !important; 
+}
+.navbar-custom .nav-link.dropdown-toggle::after { 
+    color: #ffffff !important; 
+}
+
+/* FIX: Mencegah icon goyang saat diklik */
+.nav-link.show {
+    border: none !important;
+    margin: 0 !important;
+}
+
+/* User Avatar */
 .user-avatar {
-   width: 36px;
-   height: 36px;
-   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-   border-radius: 50%;
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   color: white;
-   font-size: 1.2rem;
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 1.2rem;
+    border: 2px solid rgba(255,255,255,0.2);
 }
 
-/* ===================================
-   MAIN CONTENT AREA
-   =================================== */
+/* Notifications */
+.notification-item:active { background-color: #e9ecef; }
+.notification-badge { font-size: 0.6rem; padding: 0.35em 0.65em; }
 
-.main-content {
-   padding: 2rem;
-   flex: 1;
-   background-color: var(--bg-main);
+/* === FIX POSISI ELEMENT (ABSOLUTE POSITIONING) === */
+
+/* 1. TOGGLE / GEAR: Kiri Bawah Mepet */
+.toggle-container {
+    position: absolute;
+    bottom: 12px; /* Di garis jalan, sedikit naik */
+    left: 15px;   /* Mepet kiri */
+    z-index: 100;
+    pointer-events: auto; /* Agar bisa diklik */
 }
 
-/* ALERTS */
-.alert {
-   border-radius: 10px;
-   border: none;
-   margin-bottom: 1.5rem;
-   box-shadow: var(--shadow-sm);
-   animation: slideDown 0.3s ease;
+.sidebar-toggle-wrapper {
+    width: 45px; height: 45px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    background: transparent; 
+    border: none;
+    transition: transform 0.4s ease; /* Transisi untuk container juga */
 }
 
-@keyframes slideDown {
-   from {
-      opacity: 0;
-      transform: translateY(-20px);
-   }
-
-   to {
-      opacity: 1;
-      transform: translateY(0);
-   }
+/* Icon Gear */
+.gear-btn {
+    font-size: 2rem; /* Diperbesar sedikit agar gagah */
+    color: #ecf0f1;
+    opacity: 0.85;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy effect */
 }
 
-/* ===================================
-   CARDS
-   =================================== */
-
-.card {
-   border: none;
-   border-radius: 12px;
-   box-shadow: var(--shadow-sm);
-   transition: var(--transition-smooth);
-   overflow: visible;
-   background: white;
+/* ANIMASI GEAR KEMBALI */
+.sidebar-toggle-wrapper:hover .gear-btn { 
+    opacity: 1;
+    transform: rotate(180deg) scale(1.1); /* Putar 180 derajat dan zoom dikit */
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255,255,255,0.5); /* Glow effect */
 }
 
-.card:hover {
-   transform: translateY(-4px);
-   box-shadow: var(--shadow-md);
+/* 2. USER / NOTIF: Kanan Atas (Top Right) */
+.user-container {
+    position: absolute;
+    top: 15px;    /* Mepet atas */
+    right: 25px;  /* Mepet kanan */
+    z-index: 100;
+    pointer-events: auto;
+    display: flex; /* Kunci layout agar tidak wrapping */
+    align-items: center;
 }
 
-.card-body {
-   padding: 1.5rem;
+/* FIX DROPDOWN POSITION */
+.user-container .dropdown-menu {
+    position: absolute;
+    right: 0;
+    left: auto;
+    top: 100%;
+    margin-top: 10px; /* Jarak dari icon */
 }
 
-.card-header {
-   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-   color: white !important;
-   /* Tambahkan !important untuk memaksa */
-   border: none;
-   padding: 1rem 1.5rem;
-   font-weight: 600;
+/* ===== 5. ANIMASI MOTOR & JAM (COMPLEX) ===== */
+.road {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 12px;
+    background: #1a1a1a;
+    border-top: 3px dashed #ffd700;
+    z-index: 5;
+}
+.animation-container { position: relative; width: 100%; height: 100%; }
+
+/* Clock Styles */
+.clock {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 130px; height: 130px;
+    z-index: 2;
+}
+.clock-face {
+    width: 100%; height: 100%;
+    background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f8f9fa 50%, #e9ecef 100%);
+    border: 6px solid #2c3e50;
+    border-radius: 50%;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.clock-number {
+    position: absolute; width: 100%; height: 100%;
+    font-size: 13px; font-weight: 700; color: #2c3e50;
+    font-family: 'Playfair Display', serif;
+}
+.clock-number span { position: absolute; left: 50%; top: 50%; transform-origin: center; }
+
+/* Clock Numbers Positioning */
+.num-12 { transform: translate(-50%, -50%) rotate(0deg) translateY(-52px) rotate(0deg); }
+.num-1 { transform: translate(-50%, -50%) rotate(30deg) translateY(-52px) rotate(-30deg); }
+.num-2 { transform: translate(-50%, -50%) rotate(60deg) translateY(-52px) rotate(-60deg); }
+.num-3 { transform: translate(-50%, -50%) rotate(90deg) translateY(-52px) rotate(-90deg); }
+.num-4 { transform: translate(-50%, -50%) rotate(120deg) translateY(-52px) rotate(-120deg); }
+.num-5 { transform: translate(-50%, -50%) rotate(150deg) translateY(-52px) rotate(-150deg); }
+.num-6 { transform: translate(-50%, -50%) rotate(180deg) translateY(-52px) rotate(-180deg); }
+.num-7 { transform: translate(-50%, -50%) rotate(210deg) translateY(-52px) rotate(-210deg); }
+.num-8 { transform: translate(-50%, -50%) rotate(240deg) translateY(-52px) rotate(-240deg); }
+.num-9 { transform: translate(-50%, -50%) rotate(270deg) translateY(-52px) rotate(-270deg); }
+.num-10 { transform: translate(-50%, -50%) rotate(300deg) translateY(-52px) rotate(-300deg); }
+.num-11 { transform: translate(-50%, -50%) rotate(330deg) translateY(-52px) rotate(-330deg); }
+
+.clock-center {
+    width: 12px; height: 12px; background: #c0392b;
+    border-radius: 50%; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); z-index: 15; border: 2px solid #fff;
 }
 
-/* Tambahan: Pastikan semua elemen teks di dalam header juga putih */
-.card-header h1,
-.card-header h2,
-.card-header h3,
-.card-header h4,
-.card-header h5,
-.card-header h6,
-.card-header span,
-.card-header div {
-   color: #ffffff !important;
+/* Hands */
+.hour-hand {
+    position: absolute; width: 5px; height: 35px; background: #2c3e50;
+    left: 50%; top: 50%; transform-origin: 50% 100%;
+    border-radius: 4px 4px 0 0; z-index: 12;
+    margin-left: -2.5px; margin-top: -35px;
+}
+.minute-hand {
+    position: absolute; width: 4px; height: 48px; background: #e74c3c;
+    left: 50%; top: 50%; transform-origin: 50% 100%;
+    border-radius: 4px 4px 0 0; z-index: 13;
+    margin-left: -2px; margin-top: -48px; transition: opacity 0.3s ease;
+}
+.old-minute-hand {
+    position: absolute; width: 4px; height: 48px; background: #95a5a6;
+    border-radius: 4px 4px 0 0; left: 50%; top: 50%;
+    margin-left: -2px; margin-top: -48px; transform-origin: 50% 100%;
+    z-index: 14; opacity: 0;
 }
 
-/* ===================================
-   BUTTONS
-   =================================== */
+/* Hands Animation Keyframes */
+.old-minute-hand.removing { animation: removeHand 2.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards; }
+.old-minute-hand.installing { animation: installHand 2.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards; }
 
-.btn {
-   border-radius: 8px;
-   padding: 0.6rem 1.5rem;
-   font-weight: 500;
-   transition: var(--transition-smooth);
-   border: none;
+@keyframes removeHand {
+    0% { opacity: 1; transform: rotate(var(--start-angle)) scale(1); }
+    15% { opacity: 1; transform: rotate(calc(var(--start-angle) + 5deg)) scale(1.15) translateY(-8px); }
+    30% { opacity: 1; transform: rotate(calc(var(--start-angle) - 20deg)) scale(0.95) translateY(-20px) translateX(-15px); }
+    100% { opacity: 0; transform: rotate(calc(var(--start-angle) - 110deg)) scale(0.2) translateY(-110px) translateX(-75px); }
+}
+@keyframes installHand {
+    0% { opacity: 0; transform: rotate(calc(var(--end-angle) + 110deg)) scale(0.2) translateY(-110px) translateX(75px); }
+    100% { opacity: 1; transform: rotate(var(--end-angle)) scale(1); }
 }
 
-.btn-primary {
-   background: linear-gradient(135deg, #000000 0%, #333333 100%);
-   color: #ffffff;
+/* Motor & Person */
+.motorcycle-person {
+    position: absolute; left: -280px; bottom: 20px;
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4));
+    transition: left 2.5s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 20;
 }
+.motorcycle-person.riding-to-clock { left: calc(50% - 220px) !important; }
+.motorcycle-person.leaving { left: 100% !important; }
 
-.btn-primary:hover {
-   background: linear-gradient(135deg, #333333 0%, #000000 100%);
-   transform: translateY(-2px);
-   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
+/* Person Details */
+.person { position: absolute; width: 55px; height: 80px; left: 22px; bottom: 38px; z-index: 6; transition: left 0.8s ease-out; }
+.motorcycle-person.person-walking .person { left: 70px; }
 
-.btn-danger {
-   background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-}
+.person-head { width: 30px; height: 30px; background: #ffd7a8; border-radius: 50%; position: absolute; top: 0; left: 12px; border: 3px solid #d4924d; }
+.helmet { width: 34px; height: 22px; background: #c0392b; border-radius: 17px 17px 6px 6px; position: absolute; top: -4px; left: 10px; border: 3px solid #a93226; }
+.person-body { width: 24px; height: 38px; background: #2980b9; position: absolute; top: 28px; left: 15px; border-radius: 5px; }
+.person-arm { width: 26px; height: 10px; background: #2980b9; position: absolute; top: 32px; border-radius: 5px; }
+.person-arm-left { left: 6px; transform: rotate(-40deg); transform-origin: right center; }
+.person-arm-right { right: 6px; transform: rotate(40deg); transform-origin: left center; }
+.person.holding-tool .person-arm-right { animation: holdingTool 1.5s ease-in-out infinite; }
+@keyframes holdingTool { 0%, 100% { transform: rotate(40deg); } 50% { transform: rotate(-40deg) translateY(-10px); } }
+.person-leg { width: 12px; height: 28px; background: #2c3e50; position: absolute; top: 64px; border-radius: 5px; }
+.person-leg-left { left: 14px; transform: rotate(-6deg); }
+.person-leg-right { right: 14px; transform: rotate(6deg); }
 
-.btn-danger:hover {
-   background: linear-gradient(135deg, #c82333 0%, #dc3545 100%);
-   transform: translateY(-2px);
-   box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
-}
+/* Motor Details */
+.motorcycle { position: relative; width: 110px; height: 60px; }
+.bike-body { width: 72px; height: 24px; background: #c0392b; position: absolute; top: 14px; left: 20px; border-radius: 10px; }
+.bike-seat { width: 34px; height: 12px; background: #2c3e50; position: absolute; top: 7px; left: 28px; border-radius: 6px; }
+.bike-handlebar { width: 28px; height: 7px; background: #7f8c8d; position: absolute; top: 12px; left: 11px; border-radius: 4px; }
+.bike-handlebar::before, .bike-handlebar::after { content: ''; width: 7px; height: 7px; background: #2c3e50; border-radius: 50%; position: absolute; top: 0; }
+.bike-handlebar::before { left: -3px; } .bike-handlebar::after { right: -3px; }
+.bike-wheel { width: 28px; height: 28px; background: radial-gradient(circle, #34495e 0%, #2c3e50 60%, #1a1a1a 100%); border: 5px solid #555; border-radius: 50%; position: absolute; top: 28px; }
+.bike-wheel-front { left: 9px; } .bike-wheel-back { right: 9px; }
+.motorcycle-person.rotating .bike-wheel { animation: rotateWheel 0.35s linear infinite; }
+@keyframes rotateWheel { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-.btn-outline-dark {
-   border: 2px solid #000000;
-   color: #000000;
-}
+/* Effects */
+.smoke { position: absolute; width: 10px; height: 10px; background: rgba(255, 255, 255, 0.5); border-radius: 50%; bottom: 33px; right: 12px; }
+.motorcycle-person.rotating .smoke { animation: smokeAnimation 0.9s ease-out infinite; }
+@keyframes smokeAnimation { 0% { opacity: 0.7; transform: translateX(0) scale(1); } 100% { opacity: 0; transform: translateX(-35px) scale(1.8); } }
+.wrench { position: absolute; width: 50px; height: 14px; background: #7f8c8d; border-radius: 4px; right: -60px; top: 40px; opacity: 0; transition: opacity 0.3s ease; }
+.person.holding-tool .wrench { opacity: 1; }
+.sparkles { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 140px; height: 140px; opacity: 0; pointer-events: none; }
+.sparkle { position: absolute; width: 10px; height: 10px; background: #f39c12; border-radius: 50%; box-shadow: 0 0 20px #f39c12; }
+.sparkles.active { opacity: 1; }
+.sparkles.active .sparkle { animation: sparkleGlow 0.7s ease-in-out infinite; }
+.sparkle1 { top: 15%; left: 50%; } .sparkle2 { top: 50%; left: 75%; animation-delay: 0.1s; } 
+.sparkle3 { top: 75%; left: 50%; animation-delay: 0.2s; } .sparkle4 { top: 50%; left: 25%; animation-delay: 0.3s; }
+@keyframes sparkleGlow { 0%, 100% { opacity: 0.2; transform: scale(0.5); } 50% { opacity: 1; transform: scale(2.5); } }
 
-.btn-outline-dark:hover {
-   background-color: #000000;
-   color: white;
-}
+/* ===== 6. CONTENT UTILITIES (Card, Table, Button) ===== */
+.main-content { padding: 2rem; flex: 1; background-color: var(--bg-main); }
+.alert { border-radius: 10px; border: none; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); animation: slideDown 0.3s ease; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ===================================
-   FORMS
-   =================================== */
+.card { border: none; border-radius: 12px; box-shadow: var(--shadow-sm); transition: var(--transition-smooth); background: white; }
+.card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+.card-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white !important; border: none; padding: 1rem 1.5rem; font-weight: 600; }
+.card-header * { color: #ffffff !important; }
 
-.form-control,
-.form-select {
-   border-radius: 8px;
-   border: 1px solid var(--border-color);
-   overflow: hidden;
-   transition: var(--transition-smooth);
-}
+.btn { border-radius: 8px; padding: 0.6rem 1.5rem; font-weight: 500; transition: var(--transition-smooth); border: none; }
+.btn-primary { background: linear-gradient(135deg, #000000 0%, #333333 100%); color: #ffffff; }
+.btn-primary:hover { background: linear-gradient(135deg, #333333 0%, #000000 100%); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
 
-/* Use this utility to enable clipping only where needed */
-.card--clip {
-   overflow: hidden;
-}
+.table { border-radius: 10px; overflow: visible; box-shadow: var(--shadow-sm); }
+.table thead th { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-bottom: 2px solid var(--border-color); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; padding: 1rem; }
 
-.form-control:focus,
-.form-select:focus {
-   border-color: #000000;
-   box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.1);
-}
+.dropdown-menu { border-radius: 10px; border: 1px solid var(--border-color); box-shadow: var(--shadow-md); padding: 0.5rem 0; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ===================================
-   TABLES
-   =================================== */
-
-.table {
-   border-radius: 10px;
-   overflow: visible;
-   box-shadow: var(--shadow-sm);
-}
-
-.table thead th {
-   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-   border-bottom: 2px solid var(--border-color);
-   font-weight: 600;
-   text-transform: uppercase;
-   font-size: 0.85rem;
-   letter-spacing: 0.5px;
-   padding: 1rem;
-}
-
-.table tbody tr {
-   transition: var(--transition-smooth);
-}
-
-.table tbody tr:hover {
-   background-color: rgba(0, 0, 0, 0.02);
-}
-
-/* ===================================
-   DROPDOWN
-   =================================== */
-
-.dropdown-menu {
-   border-radius: 10px;
-   border: 1px solid var(--border-color);
-   box-shadow: var(--shadow-md);
-   padding: 0.5rem 0;
-   animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-   from {
-      opacity: 0;
-      transform: translateY(-10px);
-   }
-
-   to {
-      opacity: 1;
-      transform: translateY(0);
-   }
-}
-
-.dropdown-item {
-   padding: 0.75rem 1.25rem;
-   transition: var(--transition-smooth);
-   border-radius: 6px;
-   margin: 0 0.5rem;
-}
-
-.dropdown-item:hover {
-   background-color: rgba(0, 0, 0, 0.05);
-}
-
-.dropdown-header {
-   font-weight: 600;
-   color: #6c757d;
-   font-size: 0.85rem;
-}
-
-/* ===================================
-   RESPONSIVE DESIGN
-   =================================== */
-
+/* Responsive Adjustments */
 @media (max-width: 767.98px) {
-   #sidebar-wrapper {
-      margin-left: -260px;
-   }
-
-   #page-content-wrapper {
-      margin-left: 0;
-   }
-
-   #wrapper.toggled #sidebar-wrapper {
-      margin-left: 0;
-   }
-
-   #wrapper.toggled #page-content-wrapper {
-      margin-left: 0;
-   }
-
-   .main-content {
-      padding: 1rem;
-   }
-
-   .navbar {
-      padding: 0.5rem 1rem;
-   }
-}
-
-@media (min-width: 768px) and (max-width: 991.98px) {
-   .main-content {
-      padding: 1.5rem;
-   }
-}
-
-/* ===================================
-   UTILITIES
-   =================================== */
-
-.shadow-sm {
-   box-shadow: var(--shadow-sm) !important;
-}
-
-.shadow-md {
-   box-shadow: var(--shadow-md) !important;
-}
-
-.shadow-lg {
-   box-shadow: var(--shadow-lg) !important;
-}
-
-.border-bottom {
-   border-bottom: 1px solid var(--border-color) !important;
-}
-
-/* ===================================
-   LOADING ANIMATION (BONUS!)
-   =================================== */
-
-.spinner-border-sm {
-   width: 1rem;
-   height: 1rem;
-   border-width: 0.15em;
-}
-
-/* ===================================
-   PAGE TRANSITIONS (BONUS!)
-   =================================== */
-
-.fade-in {
-   animation: fadeInUp 0.5s ease;
-}
-
-@keyframes fadeInUp {
-   from {
-      opacity: 0;
-      transform: translateY(20px);
-   }
-
-   to {
-      opacity: 1;
-      transform: translateY(0);
-   }
+    .main-content { padding: 1rem; }
 }
