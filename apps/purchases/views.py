@@ -62,33 +62,26 @@ class PurchaseOrderListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['vendors'] = Vendor.objects.all()
         context['statuses'] = PurchaseOrder.StatusChoices.choices
-       
-        context['current_query'] = self.request.GET.get('q', '')
-        context['current_status'] = self.request.GET.get('status', '')
-       
+        
+        query = self.request.GET.get('q', '')
+        status_param = self.request.GET.get('status', '')
         vendor_param = self.request.GET.get('vendor')
-        context['current_vendor'] = int(vendor_param) if vendor_param else 0
-        
-        # Build vendor_selected dict to avoid template comparison syntax error
-        context['vendor_selected'] = {}
-        if vendor_param:
-            try:
-                context['vendor_selected'][int(vendor_param)] = True
-            except (ValueError, TypeError):
-                pass
-        
-        # Build status_selected dict
-        context['status_selected'] = {}
-        status_param = self.request.GET.get('status')
-        if status_param:
-            context['status_selected'][status_param] = True
-        
-        return context
 
+        # Perbaikan: Pakai satu blok ini saja untuk current_vendor
+        try:
+            context['current_vendor'] = int(vendor_param) if vendor_param and vendor_param.isdigit() else 0
+        except (ValueError, TypeError):
+            context['current_vendor'] = 0
+        
+        context['current_query'] = query
+        context['current_status'] = status_param
+        # context['current_vendor'] = ... <--- HAPUS BARIS YANG INI (Redundan & Berbahaya)
+        
         context['start_date'] = self.request.GET.get('start_date', '')
         context['end_date'] = self.request.GET.get('end_date', '')
-        return context
 
+        # Sisa kode vendor_selected dan status_selected tetap sama...
+        return context
 
 # --- DETAIL & STATUS ACTIONS ---
 @login_required
@@ -203,6 +196,8 @@ def purchase_form_view(request, pk=None):
 
 
 # --- DELETE VIEW (UPDATED SAFETY RULES) ---
+# apps/purchases/views.py
+
 class PurchaseOrderDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = PurchaseOrder
     template_name = 'purchases/purchase_confirm_delete.html'
@@ -210,61 +205,84 @@ class PurchaseOrderDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteVie
 
     def test_func(self):
         """
-        RULE DELETE:
-        - User harus Owner
-        - PO harus status PENDING
-        - Jika COMPLETED/CANCELLED → DILARANG HAPUS (gunakan Cancel untuk revert)
-        - BARANG TIDAK BOLEH SUDAH DIPAKAI DI TRANSAKSI
+        ATURAN HAPUS BARU:
+        1. User harus Owner.
+        2. Barang dari PO ini TIDAK BOLEH sudah digunakan di transaksi.
+        (Status PENDING, COMPLETED, CANCELLED boleh dihapus asal barangnya belum laku)
         """
         po = self.get_object()
-        is_owner = self.request.user.role == CustomUser.RoleChoices.OWNER
-        is_pending = po.status == PurchaseOrder.StatusChoices.PENDING
-        # CEK BARU: Barang tidak boleh sudah dipakai di transaksi
-        items_not_used = not po.has_items_used_in_transactions()
-        return is_owner and is_pending and items_not_used
-   
-    def handle_no_permission(self):
-        po = self.get_object()
+        
+        # 1. Cek Role Owner
         if self.request.user.role != CustomUser.RoleChoices.OWNER:
-            messages.error(self.request, "Akses Ditolak! Hanya Owner yang boleh menghapus PO.")
-        elif po.status != PurchaseOrder.StatusChoices.PENDING:
-            messages.error(
-                self.request, 
-                f"DILARANG MENGHAPUS! PO #{po.id} statusnya '{po.get_status_display()}'. "
-                f"Gunakan tombol 'Batalkan/Cancel' untuk mengembalikan stok secara aman."
-            )
+            return False
+
+        # 2. Cek Ketergantungan Transaksi (FIFO Check)
+        # Kalau sudah ada item dari PO ini yang laku, HARAM dihapus.
+        if po.has_items_used_in_transactions():
+            return False
+
+        return True
+
+    def handle_no_permission(self):
+        """
+        Memberikan pesan error yang spesifik kenapa ditolak.
+        """
+        po = self.get_object()
+        
+        # Kasus 1: Bukan Owner
+        if self.request.user.role != CustomUser.RoleChoices.OWNER:
+            messages.error(self.request, "⛔ Akses Ditolak! Hanya Owner yang boleh menghapus PO.")
+        
+        # Kasus 2: Barang Sudah Terpakai (Apapun status PO-nya)
         elif po.has_items_used_in_transactions():
-            # CEK BARU: Barang sudah dipakai di transaksi
             used_items = po.get_items_used_in_transactions_detail()
-            items_str = ", ".join([f"{item['item__name']} ({item['total_qty_used']} qty)" for item in used_items])
+            # Perhatikan: item['name'] sesuai update di models.py
+            items_str = ", ".join([f"{item['name']} ({item['total_qty_used']} qty)" for item in used_items])
+            
             messages.error(
                 self.request,
-                f"❌ TIDAK BISA DIHAPUS! Barang dari PO #{po.id} sudah dipakai di transaksi: {items_str}. "
-                f"Silakan batalkan transaksi terlebih dahulu sebelum menghapus PO."
+                f"❌ TIDAK BISA DIHAPUS! Sebagian barang dari PO #{po.id} sudah terjual: {items_str}. "
+                f"Silakan batalkan transaksi penjualan terkait terlebih dahulu."
             )
-       
+        
+        # Kasus Default
+        else:
+            messages.error(self.request, "Tidak diizinkan menghapus PO ini.")
+        
         return redirect('purchases:purchase_list')
 
     def form_valid(self, form):
-        # Double check status saat tombol konfirmasi ditekan
-        if self.object.status != PurchaseOrder.StatusChoices.PENDING:
-            messages.error(self.request, "Tidak bisa menghapus PO yang sudah diproses.")
-            return redirect('purchases:purchase_list')
+        """
+        Eksekusi Hapus
+        """
+        po = self.object
         
-        # CEK BARU: Barang tidak boleh sudah dipakai di transaksi
-        if self.object.has_items_used_in_transactions():
-            used_items = self.object.get_items_used_in_transactions_detail()
-            items_str = ", ".join([f"{item['item__name']} ({item['total_qty_used']} qty)" for item in used_items])
-            messages.error(
-                self.request,
-                f"❌ Gagal menghapus! Barang dari PO #{self.object.id} sudah dipakai di transaksi: {items_str}"
-            )
+        # Double check terakhir (Safety Net)
+        if po.has_items_used_in_transactions():
+            messages.error(self.request, "❌ Gagal! Barang dari PO ini mendadak terdeteksi sudah terjual.")
             return redirect('purchases:purchase_list')
 
-        po_id = self.object.id
-        vendor = self.object.vendor.name
-        log_activity(self.request, 'DELETE', 'PurchaseOrder', po_id, f"Hapus PO #{po_id} (Vendor: {vendor})")
-        messages.success(self.request, f"Purchase Order #{po_id} berhasil dihapus.")
+        po_id = po.id
+        vendor_name = po.vendor.name
+        
+        # Catat Log
+        log_activity(
+            self.request, 
+            'DELETE', 
+            'PurchaseOrder', 
+            po_id, 
+            f"Menghapus Permanent PO #{po_id} (Vendor: {vendor_name})"
+        )
+        
+        # Pesan Sukses
+        messages.success(
+            self.request, 
+            f"✅ Purchase Order #{po_id} berhasil dihapus permanen. "
+            f"Stok gudang otomatis disesuaikan."
+        )
+        
+        # Saat delete() dipanggil, signal 'pre_delete' di signals.py akan otomatis jalan
+        # untuk mengurangi stok InventoryItem (jika PO tadinya COMPLETED).
         return super().form_valid(form)
 
 

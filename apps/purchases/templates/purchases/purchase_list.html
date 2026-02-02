@@ -51,8 +51,9 @@
                         <select name="vendor" class="form-select">
                             <option value="">Semua Vendor</option>
                             {% for v in vendors %}
-                            <option value="{{ v.pk }}" {% if vendor_selected|get_item:v.pk %}selected{% endif %}>{{
-                                v.name }}</option>
+                                <option value="{{ v.pk }}" {% if current_vendor == v.pk %}selected{% endif %}>
+                                    {{ v.name }}
+                                </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -61,9 +62,11 @@
                         <select name="status" class="form-select">
                             <option value="">Semua Status</option>
                             {% for value, text in statuses %}
-                            <option value="{{ value }}" {% if status_selected|get_item:value %}selected{% endif %}>{{
-                                text }}</option>
+                                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                                    {{ text }}
+                                </option>
                             {% endfor %}
+                        </select>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -169,8 +172,8 @@
                                         </li>
                                         <li class="px-3 py-2">
                                             <small class="text-muted">
-                                                <i class="bi bi-info-circle"></i> Status COMPLETED tidak bisa kembali ke
-                                                PENDING
+                                                Qty: <span class="badge bg-info">{{ item.quantity }}</span> | 
+                                                Harga: Rp {{ item.unit_price|intcomma }}
                                             </small>
                                         </li>
                                     </ul>
@@ -191,28 +194,29 @@
                             <td class="text-end">
                                 <div class="btn-group btn-group-sm">
                                     {% if po.status == 'PENDING' %}
-                                    <!-- PENDING: Boleh Edit & Hapus -->
-                                    <a href="{% url 'purchases:purchase_update' po.pk %}"
+                                        <a href="{% url 'purchases:purchase_update' po.pk %}"
                                         class="btn btn-outline-primary" title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    {% if user.role == 'OWNER' %}
-                                    <a href="{% url 'purchases:purchase_delete' po.pk %}" class="btn btn-outline-danger"
-                                        title="Hapus">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-outline-secondary" disabled title="Tidak bisa diedit">
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </button>
                                     {% endif %}
 
-                                    {% else %}
-                                    <!-- COMPLETED/CANCELLED: TIDAK BOLEH Edit/Hapus -->
-                                    <button class="btn btn-outline-secondary" disabled
-                                        title="Tidak bisa diedit (Status: {{ po.get_status_display }})">
-                                        <i class="bi bi-pencil-fill"></i>
-                                    </button>
-                                    <button class="btn btn-outline-secondary" disabled
-                                        title="Tidak bisa dihapus (Status: {{ po.get_status_display }})">
-                                        <i class="bi bi-trash-fill"></i>
-                                    </button>
+                                    {% if user.role == 'OWNER' %}
+                                        {% if not po.has_items_used_in_transactions %}
+                                            <a href="{% url 'purchases:purchase_delete' po.pk %}" 
+                                            class="btn btn-outline-danger"
+                                            title="Hapus Permanen (Stok akan ditarik)">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        {% else %}
+                                            <button class="btn btn-outline-secondary" disabled 
+                                                    title="Terkunci: Barang sudah terjual di transaksi">
+                                                <i class="bi bi-lock-fill"></i>
+                                            </button>
+                                        {% endif %}
                                     {% endif %}
                                 </div>
                             </td>
@@ -233,9 +237,10 @@
                                                     class="d-flex justify-content-between align-items-start p-2 border rounded bg-white">
                                                     <div class="flex-grow-1">
                                                         <strong>{{ item.item.name }}</strong><br>
-                                                        <small class="text-muted">Qty: <span class="badge bg-info">{{
-                                                                item.quantity }}</span> | Harga: Rp {{
-                                                            item.unit_price|intcomma }}</small>
+                                                        <small class="text-muted">
+                                                            Qty: <span class="badge bg-info">{{ item.quantity }}</span> | 
+                                                            Harga: Rp {{ item.unit_price|intcomma }}
+                                                        </small>
                                                     </div>
                                                     <div class="text-end ms-2 fw-bold">Rp {{ item.subtotal|intcomma }}
                                                     </div>

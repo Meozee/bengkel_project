@@ -73,30 +73,30 @@ class PurchaseOrder(models.Model):
 
     def has_items_used_in_transactions(self):
         """
-        Check apakah ada barang dari PO yang sudah dipakai di transaksi aktif.
-        Return: True jika ada, False jika tidak
+        Cek apakah stok SPESIFIK dari PO ini sudah diambil oleh transaksi.
+        Menggunakan tabel TransactionItemSource (FIFO Logic).
         """
-        return len(self.get_items_used_in_transactions()) > 0
+        from apps.transactions.models import TransactionItemSource
+        
+        # Cek apakah ada 'jejak' pengambilan barang dari PO ini
+        return TransactionItemSource.objects.filter(
+            purchase_order_item__purchase_order=self
+        ).exists()
 
     def get_items_used_in_transactions_detail(self):
         """
-        Get detail lengkap barang yang sudah dipakai beserta jumlahnya.
-        Return: List of dict dengan item info dan qty yang dipakai
+        Ambil detail barang apa saja dari PO ini yang sudah laku terjual.
         """
-        from apps.transactions.models import TransactionItem, Transaction
-        from django.db.models import Sum
+        from apps.transactions.models import TransactionItemSource
         
-        po_item_ids = self.items.values_list('item_id', flat=True)
-        
-        # Agregasi: total qty per item di transaksi aktif
-        used_summary = TransactionItem.objects.filter(
-            item_id__in=po_item_ids,
-            transaction__status__in=[Transaction.StatusChoices.PENDING, Transaction.StatusChoices.COMPLETED]
-        ).values('item_id', 'item__name').annotate(
-            total_qty_used=Sum('quantity')
-        ).order_by('item__name')
-        
-        return list(used_summary)
+        # Grouping berdasarkan nama item dan jumlah yang diambil
+        return TransactionItemSource.objects.filter(
+            purchase_order_item__purchase_order=self
+        ).values(
+            name=F('purchase_order_item__item__name') # Alias biar mudah dipanggil di views
+        ).annotate(
+            total_qty_used=Sum('quantity_taken')
+        ).order_by('name')
 
 
 class PurchaseOrderItem(models.Model):

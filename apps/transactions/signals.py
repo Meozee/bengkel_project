@@ -48,9 +48,9 @@ def handle_transaction_status_change(sender, instance, created, **kwargs):
             Transaction.objects.filter(pk=instance.pk).update(completed_at=timezone.now())
 
             for tx_item in instance.items.all():
-                qty_to_deduct = tx_item.quantity # Misal butuh 2 oli
+                qty_needed = tx_item.quantity
                 
-                # Cari batch barang dari PO yang masih ada sisanya (FIFO: Order by Date)
+                # Cari batch PO yang statusnya COMPLETED dan stoknya masih ada
                 batches = PurchaseOrderItem.objects.filter(
                     item=tx_item.item,
                     quantity_remaining__gt=0,
@@ -58,26 +58,30 @@ def handle_transaction_status_change(sender, instance, created, **kwargs):
                 ).order_by('purchase_order__order_date')
 
                 for batch in batches:
-                    if qty_to_deduct <= 0: break
-
-                    if batch.quantity_remaining >= qty_to_deduct:
-                        # Batch ini cukup (Misal: Butuh 2, di PO ada 5)
-                        take = qty_to_deduct
+                    if qty_needed <= 0: break
+                    
+                    if batch.quantity_remaining >= qty_needed:
+                        take = qty_needed
                         batch.quantity_remaining -= take
-                        qty_to_deduct = 0
+                        qty_needed = 0
                     else:
-                        # Batch ini kurang, ambil semua sisanya (Misal: Butuh 2, di PO cuma ada 1)
                         take = batch.quantity_remaining
-                        qty_to_deduct -= take
+                        qty_needed -= take
                         batch.quantity_remaining = 0
                     
                     batch.save()
-
-                    # CATAT SUMBER PO NYA
                     TransactionItemSource.objects.create(
                         transaction_item=tx_item,
                         purchase_order_item=batch,
                         quantity_taken=take
+                    )
+
+                # --- KUNCI PERBAIKAN 2: Validasi Ketat ---
+                if qty_needed > 0:
+                    raise ValueError(
+                        f"Gagal! Stok batch untuk {tx_item.item.name} tidak cukup. "
+                        f"Kurang {qty_needed} unit di catatan PO. "
+                        f"Pastikan semua PO sudah COMPLETED sebelum transaksi selesai."
                     )
 
                 # Update total master inventory (tetap perlu untuk tampilan stok cepat)

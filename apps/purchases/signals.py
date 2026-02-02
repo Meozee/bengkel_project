@@ -40,144 +40,67 @@ def store_old_purchase_status(sender, instance, **kwargs):
 
 @receiver(post_save, sender=PurchaseOrder)
 def handle_purchase_status_change(sender, instance, created, **kwargs):
-    """
-    Handle perubahan status Purchase Order:
-    - PENDING/CANCELLED → COMPLETED: tambah stok + update buy_price
-    - COMPLETED → CANCELLED: kurangi stok kembali (DENGAN VALIDASI)
-    """
-    if created:
-        return
+    if created: return
 
     old_status = getattr(instance, "_old_status", None)
     new_status = instance.status
 
-    # === KASUS 1: Transaksi Selesai (Barang Masuk) ===
-    if old_status != PurchaseOrder.StatusChoices.COMPLETED and new_status == PurchaseOrder.StatusChoices.COMPLETED:
+    if old_status != 'COMPLETED' and new_status == 'COMPLETED':
         with transaction.atomic():
-            # Lock semua inventory items yang terlibat
-            item_ids = instance.items.values_list('item_id', flat=True).distinct()
-            items_map = {
-                it.pk: InventoryItem.objects.select_for_update().get(pk=it.pk)
-                for it in InventoryItem.objects.filter(pk__in=item_ids)
-            }
-
-            # Tambah stok dan update buy_price (weighted average)
             for po_item in instance.items.all():
-                item = items_map[po_item.item_id]
+                # --- KUNCI PERBAIKAN 1: Inisialisasi Otomatis ---
                 po_item.quantity_remaining = po_item.quantity 
                 po_item.save()
+                
+                # Update total master inventory
+                item = po_item.item
                 before = item.quantity
-                delta = po_item.quantity
-
-                # Update buy_price menggunakan weighted average
-                old_stock_value = Decimal(before) * Decimal(item.buy_price)
-                new_stock_value = Decimal(delta) * Decimal(po_item.unit_price)
-                total_qty = before + delta
-
-                if total_qty > 0:
-                    item.buy_price = (old_stock_value + new_stock_value) / Decimal(total_qty)
-
-                item.quantity = total_qty
+                item.quantity += po_item.quantity
                 item.save()
 
-                _create_inventory_log(
-                    item=item,
-                    change=delta,
-                    before=before,
-                    after=item.quantity,
-                    source_type="PURCHASE_COMPLETED",
-                    source_id=instance.pk,
-                    note=f"PO #{instance.pk} completed"
-                )
+                # Buat log inventory
+                _create_inventory_log(item, po_item.quantity, before, item.quantity, "PURCHASE_COMPLETED", instance.pk)
 
-    # === KASUS 2: Pembatalan PO (Barang Keluar/Ditarik) ===
+    # === KASUS 2: COMPLETED -> CANCELLED (Batalkan & Reset FIFO) ===
     elif old_status == PurchaseOrder.StatusChoices.COMPLETED and new_status != PurchaseOrder.StatusChoices.COMPLETED:
-        
-        # [NEW LOGIC] VALIDASI STOK SEBELUM CANCEL
-        # Cek apakah stok cukup untuk ditarik kembali?
-        for po_item in instance.items.all():
-            current_stock = po_item.item.quantity
-            qty_to_remove = po_item.quantity
-            
-            # Jika stok gudang LEBIH KECIL dari yang mau ditarik, artinya barang sudah terjual
-            if current_stock < qty_to_remove:
-                # Raise ValueError ini akan ditangkap oleh views.py dan ditampilkan sebagai pesan error ke user
-                raise ValueError(
-                    f"GAGAL: Barang '{po_item.item.name}' sisa stok {current_stock}, "
-                    f"padahal PO mencatat {qty_to_remove}. Sebagian barang sudah terjual!"
-                )
-
-        # Jika lolos validasi di atas, baru jalankan pengurangan stok
+        # Validasi stok cukup sudah ditangani di views.update_status
         with transaction.atomic():
-            item_ids = instance.items.values_list('item_id', flat=True).distinct()
-            items_map = {
-                it.pk: InventoryItem.objects.select_for_update().get(pk=it.pk)
-                for it in InventoryItem.objects.filter(pk__in=item_ids)
-            }
-
             for po_item in instance.items.all():
-                item = items_map[po_item.item_id]
+                # BUG B FIXED: Reset sisa batch jadi 0 agar tidak ditarik FIFO transaksi
+                po_item.quantity_remaining = 0
+                po_item.save()
+
+                item = InventoryItem.objects.select_for_update().get(pk=po_item.item_id)
                 before = item.quantity
                 
-                # Kurangi stok (Pasti aman karena sudah divalidasi diatas)
-                new_qty = item.quantity - po_item.quantity
-                change = new_qty - before
-
-                item.quantity = new_qty
+                # Kurangi stok global
+                item.quantity = max(0, item.quantity - po_item.quantity)
                 item.save()
 
                 _create_inventory_log(
-                    item=item,
-                    change=change,
-                    before=before,
-                    after=new_qty,
-                    source_type="PURCHASE_CANCELLED",
-                    source_id=instance.pk,
-                    note=f"PO #{instance.pk} cancelled/reverted"
+                    item=item, change=(item.quantity - before), before=before,
+                    after=item.quantity, source_type="PURCHASE_CANCELLED",
+                    source_id=instance.pk, note=f"PO #{instance.pk} reverted"
                 )
-
-
-# ========== PURCHASE ORDER ITEM HANDLING ==========
-
-@receiver(pre_save, sender=PurchaseOrderItem)
-def store_old_po_item(sender, instance, **kwargs):
-    """Simpan data item lama untuk deteksi perubahan"""
-    if instance.pk:
-        try:
-            old_item = PurchaseOrderItem.objects.get(pk=instance.pk)
-            instance._old_item_id = old_item.item.pk
-            instance._old_quantity = old_item.quantity
-            instance._old_unit_price = old_item.unit_price
-        except PurchaseOrderItem.DoesNotExist:
-            instance._old_item_id = None
-            instance._old_quantity = 0
-            instance._old_unit_price = Decimal('0.00')
-    else:
-        instance._old_item_id = None
-        instance._old_quantity = 0
-        instance._old_unit_price = Decimal('0.00')
-
 
 @receiver(post_save, sender=PurchaseOrderItem)
 def handle_po_item_change(sender, instance, created, **kwargs):
-    """
-    Handle perubahan item dalam PO yang sudah COMPLETED.
-    """
     po = instance.purchase_order
-
-    # Hanya proses jika PO sudah COMPLETED
     if po.status != PurchaseOrder.StatusChoices.COMPLETED:
         return
 
-    # [NOTE] Logic ini jarang terpanggil jika UI sudah memblokir edit PO Completed.
-    # Namun tetap kita pertahankan untuk keamanan level database.
-
+    # KASUS: Item Baru Ditambahkan ke PO Completed
     if created:
         with transaction.atomic():
             item = InventoryItem.objects.select_for_update().get(pk=instance.item.pk)
             before = item.quantity
             delta = instance.quantity
 
+            # 1. Inisialisasi Remaining (PENTING!)
+            instance.quantity_remaining = instance.quantity 
+            instance.save()
+
+            # Hitung Average Price
             old_stock_value = Decimal(before) * Decimal(item.buy_price)
             new_stock_value = Decimal(delta) * Decimal(instance.unit_price)
             total_qty = before + delta
@@ -189,47 +112,45 @@ def handle_po_item_change(sender, instance, created, **kwargs):
             item.save()
 
             _create_inventory_log(
-                item=item,
-                change=delta,
-                before=before,
-                after=item.quantity,
-                source_type="PURCHASE_ITEM_ADDED",
-                source_id=po.pk,
+                item=item, change=delta, before=before, after=item.quantity,
+                source_type="PURCHASE_ITEM_ADDED", source_id=po.pk,
                 note=f"Item ditambahkan ke PO #{po.pk}"
             )
 
+    # KASUS: Item Diedit (Qty Berubah)
     else:
         old_item_id = getattr(instance, "_old_item_id", None)
         old_quantity = getattr(instance, "_old_quantity", 0)
-        old_unit_price = getattr(instance, "_old_unit_price", Decimal('0.00'))
 
-        if old_item_id is None:
-            return
-
-        with transaction.atomic():
-            # Logic sederhana: Update item yang ada
-            if old_item_id == instance.item.pk:
+        if old_item_id == instance.item.pk:
+            with transaction.atomic():
                 item = InventoryItem.objects.select_for_update().get(pk=instance.item.pk)
                 before = item.quantity
-                delta = instance.quantity - old_quantity
+                diff = instance.quantity - old_quantity 
 
-                if delta != 0:
-                    if delta > 0:
+                if diff != 0:
+                    # 1. Update Remaining Stock sesuai perubahan (PENTING!)
+                    # Jika qty nambah 5, remaining juga nambah 5
+                    # Note: Hati-hati jika diff negatif dan remaining sudah terpakai
+                    instance.quantity_remaining = max(0, instance.quantity_remaining + diff)
+                    instance.save()
+
+                    # Update Average Price
+                    if diff > 0:
                         old_stock_value = Decimal(before) * Decimal(item.buy_price)
-                        new_stock_value = Decimal(delta) * Decimal(instance.unit_price)
-                        total_qty = before + delta
+                        new_stock_value = Decimal(diff) * Decimal(instance.unit_price)
+                        total_qty = before + diff
                         if total_qty > 0:
                             item.buy_price = (old_stock_value + new_stock_value) / Decimal(total_qty)
-
-                    item.quantity = before + delta
+                    
+                    item.quantity = before + diff
                     item.save()
 
                     _create_inventory_log(
-                        item=item, delta=delta, before=before, after=item.quantity,
+                        item=item, change=diff, before=before, after=item.quantity,
                         source_type="PURCHASE_ITEM_QTY_CHANGED", source_id=po.pk,
                         note=f"Qty diubah di PO #{po.pk}"
                     )
-
 
 @receiver(pre_delete, sender=PurchaseOrderItem)
 def handle_po_item_delete(sender, instance, **kwargs):

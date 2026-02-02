@@ -4,23 +4,26 @@
 
 {% block extra_head %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 <style>
+    /* Baris yang dihapus disembunyikan, bukan dibuang (untuk item yang sudah ada di DB) */
     .item-form.deleted {
         display: none;
     }
-
     .select2-container {
         width: 100% !important;
+    }
+    /* Style untuk status readonly */
+    .readonly-select {
+        pointer-events: none;
+        background-color: #e9ecef; /* Warna abu-abu bootstrap */
     }
 </style>
 {% endblock %}
 
-
 {% block content %}
 <div class="container-fluid px-4">
-    <form method="post" novalidate>
+    <form method="post" novalidate id="purchase-form">
         {% csrf_token %}
         <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
             <h1>{{ title }}</h1>
@@ -32,8 +35,13 @@
 
         {% if form.errors or formset.errors %}
         <div class="alert alert-danger shadow-sm">
-            <strong><i class="bi bi-exclamation-triangle-fill"></i> Error:</strong> Mohon perbaiki kesalahan input.
-            {{ form.errors }}
+            <strong><i class="bi bi-exclamation-triangle-fill"></i> Error:</strong> Mohon perbaiki kesalahan input di bawah.
+            {% if form.non_field_errors %}
+                {{ form.non_field_errors }}
+            {% endif %}
+            {% if formset.non_form_errors %}
+                {{ formset.non_form_errors }}
+            {% endif %}
         </div>
         {% endif %}
 
@@ -42,20 +50,33 @@
                 <div class="card shadow-sm h-100">
                     <div class="card-header bg-primary text-white">Info Order</div>
                     <div class="card-body">
-                        <div class="mb-3">{{ form.vendor.label_tag }} {{ form.vendor }}</div>
-                        <div class="mb-3">{{ form.status.label_tag }} {{ form.status }}</div>
-                        <div class="mb-3">{{ form.order_date.label_tag }} {{ form.order_date }}</div>
-                        <div class="mb-3">{{ form.expected_delivery_date.label_tag }} {{ form.expected_delivery_date }}
+                        <div class="mb-3">
+                            {{ form.vendor.label_tag }} 
+                            {{ form.vendor }}
+                            {% if form.vendor.errors %}<div class="text-danger small">{{ form.vendor.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.status.label_tag }} 
+                            {{ form.status }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.order_date.label_tag }} 
+                            {{ form.order_date }}
+                            {% if form.order_date.errors %}<div class="text-danger small">{{ form.order_date.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.expected_delivery_date.label_tag }} 
+                            {{ form.expected_delivery_date }}
                         </div>
 
                         <hr>
-                        <label class="form-label fw-bold">Penanggung Jawab (Pembeli)</label>
+                        <label class="form-label fw-bold">Penanggung Jawab</label>
                         <div class="mb-2">
-                            <small class="text-muted d-block mb-1">Opsi 1: Pilih Montir</small>
+                            <small class="text-muted">Pilih Montir:</small>
                             {{ form.purchaser_mechanic }}
                         </div>
                         <div class="mb-3">
-                            <small class="text-muted d-block mb-1">Opsi 2: Atau isi nama manual</small>
+                            <small class="text-muted">Atau Nama Manual:</small>
                             {{ form.purchaser_custom }}
                         </div>
                         <hr>
@@ -76,7 +97,7 @@
                     <div class="card-body p-0">
                         {{ formset.management_form }}
                         <div class="table-responsive">
-                            <table class="table table-striped mb-0">
+                            <table class="table table-striped mb-0" id="items-table">
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width: 45%;">Item</th>
@@ -91,16 +112,25 @@
                                         {{ form.id }}
                                         <td class="p-2">
                                             {{ form.item }}
-                                            {% if form.item.errors %}<div class="text-danger small">{{
-                                                form.item.errors.as_text }}</div>{% endif %}
+                                            {% if form.item.errors %}
+                                                <div class="text-danger small">{{ form.item.errors.as_text }}</div>
+                                            {% endif %}
                                         </td>
-                                        <td class="p-2">{{ form.quantity }}</td>
-                                        <td class="p-2">{{ form.unit_price }}</td>
+                                        <td class="p-2">
+                                            {{ form.quantity }}
+                                            {% if form.quantity.errors %}
+                                                <div class="text-danger small">{{ form.quantity.errors.as_text }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="p-2">
+                                            {{ form.unit_price }}
+                                        </td>
                                         <td class="text-center p-2">
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-danger remove-item-btn"><i
-                                                    class="bi bi-trash"></i></button>
-                                            <div class="d-none">{% if form.instance.pk %}{{ form.DELETE }}{% endif %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            <div class="d-none">
+                                                {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
                                             </div>
                                         </td>
                                     </tr>
@@ -119,12 +149,19 @@
     <tbody id="empty-form-template">
         <tr class="item-form">
             {{ formset.empty_form.id }}
-            <td class="p-2">{{ formset.empty_form.item }}</td>
-            <td class="p-2">{{ formset.empty_form.quantity }}</td>
-            <td class="p-2">{{ formset.empty_form.unit_price }}</td>
+            <td class="p-2">
+                {{ formset.empty_form.item }}
+            </td>
+            <td class="p-2">
+                {{ formset.empty_form.quantity }}
+            </td>
+            <td class="p-2">
+                {{ formset.empty_form.unit_price }}
+            </td>
             <td class="text-center p-2">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn"><i
-                        class="bi bi-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn">
+                    <i class="bi bi-trash"></i>
+                </button>
             </td>
         </tr>
     </tbody>
@@ -137,16 +174,17 @@
 
 <script>
     $(document).ready(function () {
-
-        // 1. Fungsi Init Select2
+        const formsetPrefix = 'items'; // Sesuai prefix di views.py/forms.py (default 'items')
+        
+        // --- 1. Fungsi Init Select2 ---
         function initializeSelect2(element) {
             $(element).select2({
                 theme: 'bootstrap-5',
                 placeholder: 'Cari barang (nama/SKU)...',
                 allowClear: true,
-                minimumInputLength: 0,
+                width: '100%',
                 ajax: {
-                    url: "{% url 'purchases:item_autocomplete' %}",
+                    url: "{% url 'purchases:item_autocomplete' %}", // Pastikan URL ini benar
                     dataType: 'json',
                     delay: 250,
                     data: function (params) { return { q: params.term || '' }; },
@@ -154,53 +192,90 @@
                     cache: true
                 }
             }).on('select2:select', function (e) {
+                // Auto-fill harga beli saat barang dipilih
                 var data = e.params.data;
                 $(this).closest('tr').find('input[name$="-unit_price"]').val(data.buy_price);
             });
         }
 
-        // Init pada load awal
-        $('.item-form-container select').each(function () {
+        // Init Select2 untuk baris yang sudah ada saat page load
+        $('.item-form-container .item-select').each(function () {
             initializeSelect2(this);
         });
 
-        // Init Select2 untuk Vendor & Montir (jika belum otomatis)
-        $('.select2-enable').select2({
-            theme: 'bootstrap-5',
-            width: '100%'
-        });
+        // Init Select2 untuk Vendor & Mechanic
+        $('.select2-enable').select2({ theme: 'bootstrap-5', width: '100%' });
 
-        // 2. Tambah Baris Baru
+
+        // --- 2. Fungsi Penting: Update Index Formset ---
+        // Ini mencegah error "ManagementForm data is missing" saat ada baris dihapus
+        function updateElementIndex(el, prefix, ndx) {
+            var id_regex = new RegExp('(' + prefix + '-\\d+)');
+            var replacement = prefix + '-' + ndx;
+            if ($(el).attr("for")) $(el).attr("for", $(el).attr("for").replace(id_regex, replacement));
+            if (el.id) el.id = el.id.replace(id_regex, replacement);
+            if (el.name) el.name = el.name.replace(id_regex, replacement);
+        }
+
+        function reindexForms() {
+            var forms = $('.item-form'); // Ambil semua baris (termasuk yang hidden deleted)
+            // Tapi untuk kasus hapus baris BARU, kita remove dari DOM.
+            // Jadi kita loop ulang semua yang ada di container.
+            
+            var i = 0;
+            $('.item-form-container .item-form').each(function () {
+                // Update index semua input/select/textarea di dalam baris ini
+                $(this).find('input, select, textarea').each(function () {
+                    updateElementIndex(this, formsetPrefix, i);
+                });
+                i++;
+            });
+            
+            // Update TOTAL_FORMS
+            $('#id_' + formsetPrefix + '-TOTAL_FORMS').val(i);
+        }
+
+
+        // --- 3. Tambah Baris Baru ---
         $('#add-item-btn').on('click', function (e) {
             e.preventDefault();
-            const formsetPrefix = '{{ formset.prefix }}';
-            const totalFormsInput = $(`#id_${formsetPrefix}-TOTAL_FORMS`);
-            let formIndex = parseInt(totalFormsInput.val());
-
-            // Clone template
-            let newFormHtml = $('#empty-form-template').html().replace(/__prefix__/g, formIndex);
-            $('.item-form-container').append(newFormHtml);
-
+            
+            // Ambil index terakhir
+            var totalForms = $('#id_' + formsetPrefix + '-TOTAL_FORMS');
+            var formIndex = parseInt(totalForms.val());
+            
+            // Ambil template dan ganti __prefix__ dengan index angka
+            var newRow = $('#empty-form-template').html().replace(/__prefix__/g, formIndex);
+            
+            // Masukkan ke tabel
+            $('.item-form-container').append(newRow);
+            
             // Init Select2 di baris baru
-            initializeSelect2($(`#id_${formsetPrefix}-${formIndex}-item`));
-
-            // Update counter
-            totalFormsInput.val(formIndex + 1);
+            initializeSelect2($('#id_' + formsetPrefix + '-' + formIndex + '-item'));
+            
+            // Update counter form
+            totalForms.val(formIndex + 1);
         });
 
-        // 3. Hapus Baris
+
+        // --- 4. Hapus Baris ---
         $('.item-form-container').on('click', '.remove-item-btn', function (e) {
             e.preventDefault();
-            const row = $(this).closest('.item-form');
-            const deleteInput = row.find('input[type="checkbox"][name$="-DELETE"]');
+            var row = $(this).closest('.item-form');
+            var deleteInput = row.find('input[name$="-DELETE"]');
 
-            if (deleteInput.length) {
-                // Jika row sudah ada di DB, centang DELETE dan sembunyikan
+            if (deleteInput.length > 0) {
+                // KASUS A: Baris sudah ada di database (Saved Item)
+                // Jangan dihapus dari DOM, cukup centang checkbox DELETE dan sembunyikan
                 deleteInput.prop('checked', true);
-                row.addClass('deleted');
+                row.addClass('deleted'); 
+                // Kita TIDAK re-index jika menyembunyikan row DB, karena ID-nya terikat ke DB
             } else {
-                // Jika row baru, hapus dari DOM
+                // KASUS B: Baris baru ditambahkan via JS (belum save)
+                // Hapus total dari DOM
                 row.remove();
+                // WAJIB Re-index agar urutan 0,1,2 tidak lompat jadi 0,2
+                reindexForms();
             }
         });
     });

@@ -82,10 +82,11 @@
                                     <br>
                                     <small class="text-muted">
                                         Sumber: 
-                                        {% for source in item.sources.all %}
-                                            PO-{{ source.purchase_order_item.purchase_order.id }} ({{ source.quantity_taken }} pcs){% if not forloop.last %}, {% endif %}
+                                        {% for src in item.sources.all %}
+                                            PO-{{ src.purchase_order_item.purchase_order_id }} ({{ src.quantity_taken }} pcs)
+                                            {% if not forloop.last %}, {% endif %}
                                         {% empty %}
-                                            -
+                                            <span class="text-warning">Stok Lama / Non-FIFO</span>
                                         {% endfor %}
                                     </small>
                                     {% if item.discount_percentage > 0 %}<br><small class="text-danger">Disc {{ item.discount_percentage|floatformat:0 }}%</small>{% endif %}
