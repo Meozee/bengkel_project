@@ -137,3 +137,14 @@ class TransactionService(models.Model):
         price = Decimal(self.quantity) * Decimal(self.unit_price)
         disc = price * (self.discount_percentage / Decimal('100'))
         return price - disc
+    
+    # Tambahkan di paling bawah apps/transactions/models.py
+
+class TransactionItemSource(models.Model):
+    """Mencatat histori FIFO: Transaksi ini mengambil barang dari PO mana saja"""
+    transaction_item = models.ForeignKey(TransactionItem, related_name='sources', on_delete=models.CASCADE)
+    purchase_order_item = models.ForeignKey('purchases.PurchaseOrderItem', on_delete=models.CASCADE)
+    quantity_taken = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"{self.quantity_taken} dari PO#{self.purchase_order_item.purchase_order_id}"

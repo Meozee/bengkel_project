@@ -1,4 +1,4 @@
-# Python
+# --- Python & Virtual Environments ---
 __pycache__/
 *.pyc
 *.pyo
@@ -6,25 +6,35 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 pip-log.txt
 pip-freeze.txt
 
-# Django
+# --- Django ---
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-
-# Environment variables
-.env
-
-# Media & Static files
 /media/
-/staticfiles/ # Direktori hasil collectstatic
+/staticfiles/
 
-# IDE files
+# --- Environment & Security ---
+.env
+.secrets
+*.pem
+*.key
+
+# --- Docker ---
+docker-compose.override.yml
+/pgdata/
+/db_data/
+
+# --- IDE & OS ---
 .idea/
 .vscode/
+.DS_Store
+Thumbs.db
 
-# Docker
-docker-compose.override.yml
+# --- Machine Learning (Optional) ---
+.ipynb_checkpoints/
+*.pkl

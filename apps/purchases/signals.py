@@ -1,3 +1,4 @@
+#apps/purchases/signals.py
 from decimal import Decimal
 from django.db import transaction
 from django.db.models.signals import post_save, post_delete, pre_save, pre_delete
@@ -63,6 +64,8 @@ def handle_purchase_status_change(sender, instance, created, **kwargs):
             # Tambah stok dan update buy_price (weighted average)
             for po_item in instance.items.all():
                 item = items_map[po_item.item_id]
+                po_item.quantity_remaining = po_item.quantity 
+                po_item.save()
                 before = item.quantity
                 delta = po_item.quantity
 

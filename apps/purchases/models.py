@@ -105,7 +105,7 @@ class PurchaseOrderItem(models.Model):
     """
     purchase_order = models.ForeignKey(PurchaseOrder, related_name='items', on_delete=models.CASCADE)
     item = models.ForeignKey(InventoryItem, on_delete=models.PROTECT)
-
+    quantity_remaining = models.PositiveIntegerField(default=0, help_text="Sisa stok dari batch PO ini")
     quantity = models.PositiveIntegerField(default=1)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Harga beli barang dari vendor")
 

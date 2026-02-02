@@ -4,7 +4,8 @@ from django.db import transaction
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
-
+from .models import Transaction, TransactionItem, TransactionItemSource # Tambah TransactionItemSource
+from apps.purchases.models import PurchaseOrderItem # Tambah ini
 from .models import Transaction, TransactionItem
 from apps.inventory.models import InventoryItem, InventoryLog
 
@@ -36,77 +37,78 @@ def store_old_transaction_status(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Transaction)
 def handle_transaction_status_change(sender, instance, created, **kwargs):
-    """
-    Logika Stok:
-    1. PENDING -> COMPLETED: KURANGI stok (Barang keluar)
-    2. COMPLETED -> CANCELLED: KEMBALIKAN stok (Barang batal jual)
-    """
-    if created:
-        return
+    if created: return
 
     old_status = getattr(instance, "_old_status", None)
     new_status = instance.status
 
-    # === KASUS 1: Transaksi Selesai (PENDING -> COMPLETED) ===
-    # Stok HARUS BERKURANG
+    # === KASUS 1: PENDING -> COMPLETED (LOGIK FIFO) ===
     if old_status != Transaction.StatusChoices.COMPLETED and new_status == Transaction.StatusChoices.COMPLETED:
         with transaction.atomic():
-            # Update waktu selesai
             Transaction.objects.filter(pk=instance.pk).update(completed_at=timezone.now())
 
-            # Loop semua item di keranjang
             for tx_item in instance.items.all():
-                # Lock row inventory biar aman
-                inventory_item = InventoryItem.objects.select_for_update().get(pk=tx_item.item.pk)
+                qty_to_deduct = tx_item.quantity # Misal butuh 2 oli
                 
-                before_qty = inventory_item.quantity
-                qty_sold = tx_item.quantity
-                
-                # Cek apakah stok cukup? (Opsional: bisa di-handle di form validation juga)
-                # if before_qty < qty_sold:
-                #    raise ValueError(f"Stok {inventory_item.name} tidak cukup!")
+                # Cari batch barang dari PO yang masih ada sisanya (FIFO: Order by Date)
+                batches = PurchaseOrderItem.objects.filter(
+                    item=tx_item.item,
+                    quantity_remaining__gt=0,
+                    purchase_order__status='COMPLETED'
+                ).order_by('purchase_order__order_date')
 
-                # KURANGI STOK
-                new_qty = max(0, before_qty - qty_sold)
-                inventory_item.quantity = new_qty
-                inventory_item.save()
+                for batch in batches:
+                    if qty_to_deduct <= 0: break
 
-                # CATAT LOG (Change negatif karena berkurang)
-                _create_inventory_log(
-                    item=inventory_item,
-                    change=-qty_sold,  # Negatif
-                    before=before_qty,
-                    after=new_qty,
-                    source_type="TRANSACTION_COMPLETED",
-                    source_id=instance.pk,
-                    note=f"Terjual di Invoice {instance.invoice_number}"
-                )
+                    if batch.quantity_remaining >= qty_to_deduct:
+                        # Batch ini cukup (Misal: Butuh 2, di PO ada 5)
+                        take = qty_to_deduct
+                        batch.quantity_remaining -= take
+                        qty_to_deduct = 0
+                    else:
+                        # Batch ini kurang, ambil semua sisanya (Misal: Butuh 2, di PO cuma ada 1)
+                        take = batch.quantity_remaining
+                        qty_to_deduct -= take
+                        batch.quantity_remaining = 0
+                    
+                    batch.save()
 
-    # === KASUS 2: Batal Selesai (COMPLETED -> CANCELLED) ===
-    # Stok HARUS KEMBALI
+                    # CATAT SUMBER PO NYA
+                    TransactionItemSource.objects.create(
+                        transaction_item=tx_item,
+                        purchase_order_item=batch,
+                        quantity_taken=take
+                    )
+
+                # Update total master inventory (tetap perlu untuk tampilan stok cepat)
+                inv = InventoryItem.objects.select_for_update().get(pk=tx_item.item.pk)
+                before = inv.quantity
+                inv.quantity = max(0, before - tx_item.quantity)
+                inv.save()
+
+                _create_inventory_log(inv, -tx_item.quantity, before, inv.quantity, 
+                                     "TRANSACTION_COMPLETED", instance.pk, 
+                                     f"FIFO Out: {instance.invoice_number}")
+
+    # === KASUS 2: COMPLETED -> CANCELLED (LOGIK RESTORE) ===
     elif old_status == Transaction.StatusChoices.COMPLETED and new_status == Transaction.StatusChoices.CANCELLED:
         with transaction.atomic():
             for tx_item in instance.items.all():
-                inventory_item = InventoryItem.objects.select_for_update().get(pk=tx_item.item.pk)
+                # Kembalikan ke batch PO asal (LIFO untuk pembatalan)
+                sources = TransactionItemSource.objects.filter(transaction_item=tx_item)
+                for src in sources:
+                    po_item = src.purchase_order_item
+                    po_item.quantity_remaining += src.quantity_taken
+                    po_item.save()
                 
-                before_qty = inventory_item.quantity
-                qty_returned = tx_item.quantity
-
-                # TAMBAH STOK KEMBALI
-                new_qty = before_qty + qty_returned
-                inventory_item.quantity = new_qty
-                inventory_item.save()
-
-                # CATAT LOG (Change positif karena kembali)
-                _create_inventory_log(
-                    item=inventory_item,
-                    change=qty_returned, # Positif
-                    before=before_qty,
-                    after=new_qty,
-                    source_type="TRANSACTION_CANCELLED",
-                    source_id=instance.pk,
-                    note=f"Pembatalan Invoice {instance.invoice_number}"
-                )
+                # Update master inventory
+                inv = InventoryItem.objects.select_for_update().get(pk=tx_item.item.pk)
+                before = inv.quantity
+                inv.quantity += tx_item.quantity
+                inv.save()
+                
+                _create_inventory_log(inv, tx_item.quantity, before, inv.quantity, 
+                                     "TRANSACTION_CANCELLED", instance.pk)
 
 # ========== UPDATE TOTAL AMOUNT OTOMATIS ==========
 
