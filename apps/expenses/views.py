@@ -1,5 +1,8 @@
 # apps/expenses/views.py
 
+from datetime import date, timedelta
+import calendar
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView
@@ -8,17 +11,67 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
 from django.db.models import ProtectedError, Q
-from datetime import datetime, date
 
-# Tools
 from apps.accounts.utils import log_activity
 from apps.accounts.models import CustomUser
 
 from .models import Expense, ExpenseCategory, RecurringExpense
 from .forms import ExpenseForm, ExpenseCategoryForm, RecurringExpenseForm
 
-# ... (Fungsi generate_pending_expenses TETAP SAMA, lewati saja copy-pastenya) ...
-# Pastikan fungsi generate_pending_expenses masih ada di file kamu ya.
+
+# ====================================================================
+# FUNGSI GENERATOR OTOMATIS (DIPERBAIKI)
+# ====================================================================
+def generate_pending_expenses(request=None):
+    """
+    Fungsi Pintar:
+    Mengecek semua Jadwal Rutin (RecurringExpense).
+    Jika hari ini >= Tanggal Jatuh Tempo, dan tagihan bulan ini BELUM dibuat,
+    maka buatkan tagihan baru dengan status PENDING.
+    """
+    today = date.today()
+    
+    # 1. Ambil semua jadwal yang Aktif
+    active_recurrings = RecurringExpense.objects.filter(is_active=True)
+    
+    count_created = 0
+    
+    for rec in active_recurrings:
+        # 2. Tentukan tanggal jatuh tempo bulan ini
+        try:
+            # Coba set tanggal sesuai settingan (misal tgl 30)
+            current_due_date = date(today.year, today.month, rec.due_date_day)
+        except ValueError:
+            # Jika tgl 30 tidak ada di bulan ini (misal Februari), ambil tanggal terakhir
+            last_day = calendar.monthrange(today.year, today.month)[1]
+            current_due_date = date(today.year, today.month, last_day)
+            
+        # 3. LOGIKA UTAMA:
+        # Jika hari ini sudah melewati/sama dengan tanggal jatuh tempo
+        if today >= current_due_date:
+            # Cek apakah tagihan untuk bulan & tahun ini sudah pernah dibuat?
+            already_exists = Expense.objects.filter(
+                recurring_source=rec,
+                due_date__year=today.year,
+                due_date__month=today.month
+            ).exists()
+            
+            # Jika BELUM ada, maka buat tagihan PENDING (Hutang)
+            if not already_exists:
+                Expense.objects.create(
+                    title=f"{rec.name} ({today.strftime('%B %Y')})",
+                    category=rec.category,
+                    amount=rec.amount,
+                    status=Expense.StatusChoices.PENDING, # Masuk Pending dulu
+                    due_date=current_due_date,
+                    recurring_source=rec,
+                    description=f"Tagihan rutin otomatis dari: {rec.description}",
+                    user=request.user if request else None 
+                )
+                count_created += 1
+    
+    return count_created
+
 
 # ====================================================================
 # VIEW UTAMA (INDEX)
@@ -27,16 +80,18 @@ from .forms import ExpenseForm, ExpenseCategoryForm, RecurringExpenseForm
 @login_required
 def expense_index(request):
     # 1. Jalankan Generator Otomatis
-    # (Pastikan fungsi generate_pending_expenses() sudah didefinisikan di atas atau di utils)
-    # generate_pending_expenses() 
+    # Setiap kali halaman ini dibuka, sistem mengecek apakah ada tagihan rutin baru
+    new_bills = generate_pending_expenses(request)
+    
+    if new_bills > 0:
+        messages.info(request, f"🔔 {new_bills} tagihan rutin baru telah dibuat otomatis (Pending).")
     
     # 2. Ambil Data Dasar
     pending_expenses = Expense.objects.select_related('category').filter(
         status=Expense.StatusChoices.PENDING
     ).order_by('due_date')
     
-    # PERBAIKAN 1: Tambahkan .exclude(payment_date__isnull=True)
-    # Agar data tanpa tanggal bayar tidak muncul di paling atas (baris kosong)
+    # Menampilkan data yang sudah dibayar (tidak menampilkan baris kosong tanpa tanggal bayar)
     paid_expenses = Expense.objects.select_related('category', 'user').filter(
         status=Expense.StatusChoices.PAID
     ).exclude(payment_date__isnull=True).order_by('-payment_date')
@@ -54,7 +109,6 @@ def expense_index(request):
         q_obj = Q(title__icontains=query) | Q(description__icontains=query)
         pending_expenses = pending_expenses.filter(q_obj)
         paid_expenses = paid_expenses.filter(q_obj)
-        # PERBAIKAN 3: Terapkan filter ke Jadwal Rutin juga
         recurring_expenses = recurring_expenses.filter(name__icontains=query)
     
     # B. Filter Kategori (Terapkan ke SEMUA Tab)
@@ -64,7 +118,6 @@ def expense_index(request):
         recurring_expenses = recurring_expenses.filter(category_id=category_id)
 
     # C. Filter Tanggal (Hanya untuk Riwayat & Pending)
-    # Jadwal Rutin tidak punya tanggal spesifik (cuma hari), jadi tidak difilter tanggal
     if start_date_str and end_date_str:
         try:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
@@ -87,11 +140,10 @@ def expense_index(request):
         'current_category': int(category_id) if category_id else '',
         'current_start': start_date_str or '',
         'current_end': end_date_str or '',
-        
-        # Cek unpaid recurring (sama seperti sebelumnya)
-        'unpaid_recurring': [] # (Biarkan logika unpaid recurring kamu yang lama)
     }
     return render(request, 'expenses/expense_index.html', context)
+
+
 # ====================================================================
 # VIEW BARU: DETAIL EXPENSE
 # ====================================================================
@@ -103,6 +155,7 @@ def expense_detail(request, pk):
         'title': f"Detail Pengeluaran"
     }
     return render(request, 'expenses/expense_detail.html', context)
+
 
 # ====================================================================
 # ACTIONS
@@ -247,9 +300,9 @@ class RecurringDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
 
 # ====================================================================
-# CRUD CATEGORY (Sama seperti sebelumnya)
+# CRUD CATEGORY
 # ====================================================================
-# ... (Simpan CategoryCreateView, Update, Delete yang lama di sini) ...
+
 class CategoryCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     model = ExpenseCategory
     form_class = ExpenseCategoryForm
