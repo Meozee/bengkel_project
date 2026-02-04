@@ -96,12 +96,31 @@
                                 <small class="text-muted">{{ transaction.vehicle.vehicle_type }}</small>
                             {% endif %}
                             <div class="mt-1 small">
+                                <!-- BARANG (Items) -->
                                 {% for item in transaction.items.all|slice:":2" %}
-                                    <span class="badge bg-light text-dark border mb-1"><i class="bi bi-box small"></i> {{ item.item.name }}</span>
+                                    <span class="badge bg-light text-dark border mb-1" title="{{ item.item.name }}">
+                                        <i class="bi bi-box small"></i> {{ item.item.name|truncatechars:15 }}
+                                    </span>
                                 {% endfor %}
+
+                                <!-- JASA (Services) -->
                                 {% for svc in transaction.services.all|slice:":2" %}
-                                    <span class="badge bg-light text-primary border mb-1"><i class="bi bi-wrench small"></i> {{ svc.service.name }}</span>
+                                    <span class="badge bg-light text-primary border mb-1" title="{{ svc.service.name }}">
+                                        <i class="bi bi-wrench small"></i> {{ svc.service.name|truncatechars:15 }}
+                                    </span>
                                 {% endfor %}
+
+                                <!-- BIAYA LAIN/NON-STOK (Miscs) - UPDATE DISINI -->
+                                {% for misc in transaction.miscs.all|slice:":2" %}
+                                    <span class="badge bg-light text-warning border mb-1" title="{{ misc.description }}">
+                                        <i class="bi bi-list-task small"></i> {{ misc.description|truncatechars:15 }}
+                                    </span>
+                                {% endfor %}
+                                
+                                <!-- Indikator jika ada item lebih banyak -->
+                                {% if transaction.items.count > 2 or transaction.services.count > 2 or transaction.miscs.count > 2 %}
+                                    <span class="badge bg-light text-muted border mb-1">...</span>
+                                {% endif %}
                             </div>
                         </td>
                         <td>{{ transaction.mechanic.name|default:"-" }}</td>

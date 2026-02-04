@@ -1,5 +1,3 @@
-# apps/transactions/models.py
-
 from decimal import Decimal
 from django.db import models
 from django.utils import timezone
@@ -40,7 +38,9 @@ class Transaction(models.Model):
     # ==========================
     # 3. KEUANGAN
     # ==========================
-    other_charges = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Biaya tambahan lain-lain")
+    # Biaya Global (Tetap dipertahankan sesuai permintaan)
+    other_charges = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Biaya tambahan lain-lain (Global)")
+    
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Diskon final (Nominal Rupiah)")
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 
@@ -137,8 +137,26 @@ class TransactionService(models.Model):
         price = Decimal(self.quantity) * Decimal(self.unit_price)
         disc = price * (self.discount_percentage / Decimal('100'))
         return price - disc
+
+
+# === NEW MODEL: UNTUK MENGATASI NAME ERROR ===
+class TransactionMisc(models.Model):
+    """
+    Model untuk Item Non-Stok / Biaya Lain-lain Detail
+    Contoh: Baut eceran, parkir, uang makan driver, dll.
+    """
+    transaction = models.ForeignKey(Transaction, related_name='miscs', on_delete=models.CASCADE)
+    description = models.CharField(max_length=255, help_text="Nama barang/biaya")
+    quantity = models.PositiveIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     
-    # Tambahkan di paling bawah apps/transactions/models.py
+    def __str__(self):
+        return f"{self.description} ({self.quantity})"
+
+    @property
+    def subtotal(self):
+        return Decimal(self.quantity) * Decimal(self.unit_price)
+
 
 class TransactionItemSource(models.Model):
     """Mencatat histori FIFO: Transaksi ini mengambil barang dari PO mana saja"""

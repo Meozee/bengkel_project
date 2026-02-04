@@ -1,5 +1,3 @@
-# apps/transactions/views.py
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -11,7 +9,7 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 from django.core.exceptions import ValidationError
 
-# Import Library USB Raw (Sesuai tes berhasil)
+# Import Library USB Raw
 import usb.core
 import usb.util
 
@@ -20,8 +18,14 @@ from apps.accounts.decorators import owner_required
 from apps.accounts.utils import log_activity
 
 # Models & Forms
-from .models import Transaction, TransactionItem, TransactionService
-from .forms import TransactionForm, TransactionItemFormSet, TransactionServiceFormSet
+# Pastikan TransactionMisc dan Formset-nya terimport dengan benar
+from .models import Transaction, TransactionItem, TransactionService, TransactionMisc
+from .forms import (
+    TransactionForm, 
+    TransactionItemFormSet, 
+    TransactionServiceFormSet, 
+    TransactionMiscFormSet
+)
 from apps.inventory.models import InventoryItem
 from apps.master_data.models import Service
 
@@ -35,10 +39,9 @@ from django.core.paginator import Paginator
 @login_required
 def transaction_list(request):
     """Menampilkan daftar transaksi dengan filter lengkap."""
-    # 1. Optimasi Query: select_related (1-to-1/FK) dan prefetch_related (M2M/Reverse FK)
-    # Ini krusial agar CPU Docker tidak 100% karena N+1 queries.
+    # Menambahkan 'miscs' ke prefetch agar query efisien
     txns = Transaction.objects.select_related('customer', 'vehicle', 'mechanic')\
-                              .prefetch_related('items__item', 'services__service').all()
+                              .prefetch_related('items__item', 'services__service', 'miscs').all()
     
     # 2. Filter Keyword
     customer_name = request.GET.get('customer_name')
@@ -70,7 +73,7 @@ def transaction_list(request):
         except ValueError:
             pass
 
-    # 5. Order & Pagination (PENTING: Order dulu baru Paginate)
+    # 5. Order & Pagination
     txns = txns.order_by('-created_at')
     
     paginator = Paginator(txns, 10) # Tampilkan 10 data saja per halaman
@@ -78,7 +81,7 @@ def transaction_list(request):
     page_obj = paginator.get_page(page_number)
 
     context = {
-        'transactions': page_obj,  # GUNAKAN page_obj agar HTML hanya merender 10 baris
+        'transactions': page_obj,
         'filter_customer': customer_name or '',
         'filter_mechanic': mechanic_name or '',
         'filter_plate': license_plate or '',
@@ -94,7 +97,7 @@ def transaction_detail(request, pk):
     """View untuk melihat detail lengkap transaksi (Invoice)."""
     txn = get_object_or_404(
         Transaction.objects.select_related('customer', 'vehicle', 'mechanic')
-        .prefetch_related('items__item', 'services__service'),
+        .prefetch_related('items__item', 'services__service', 'miscs'),
         pk=pk
     )
     context = {
@@ -115,8 +118,10 @@ def transaction_create(request):
         form = TransactionForm(request.POST)
         item_formset = TransactionItemFormSet(request.POST, prefix='items')
         service_formset = TransactionServiceFormSet(request.POST, prefix='services')
-        
-        if form.is_valid() and item_formset.is_valid() and service_formset.is_valid():
+        misc_formset = TransactionMiscFormSet(request.POST, prefix='miscs') # <-- Prefix penting!
+
+        # Validasi SEMUA formset termasuk misc_formset
+        if form.is_valid() and item_formset.is_valid() and service_formset.is_valid() and misc_formset.is_valid():
             try:
                 with transaction.atomic():
                     # 1. Simpan Header Transaksi
@@ -128,8 +133,7 @@ def transaction_create(request):
                     for item_obj in items:
                         item_obj.transaction = txn
                         item_obj.save()
-                    
-                    # Handle deleted items dari formset
+                    # Handle deleted items
                     for deleted_item in item_formset.deleted_objects:
                         deleted_item.delete()
                     
@@ -138,16 +142,27 @@ def transaction_create(request):
                     for svc in services:
                         svc.transaction = txn
                         svc.save()
-                    
-                    # Handle deleted services dari formset
+                    # Handle deleted services
                     for deleted_svc in service_formset.deleted_objects:
                         deleted_svc.delete()
+
+                    # 4. Simpan Miscs (Biaya Lain-lain Non-Stok) -- LOGIKA BARU
+                    miscs = misc_formset.save(commit=False)
+                    for misc in miscs:
+                        misc.transaction = txn
+                        misc.save()
+                    # Handle deleted miscs
+                    for deleted_misc in misc_formset.deleted_objects:
+                        deleted_misc.delete()
                     
-                    # 4. Hitung Ulang Total
+                    # 5. Hitung Ulang Total
+                    # Ambil semua data related yang baru disimpan
                     total_items = sum(i.subtotal for i in txn.items.all())
                     total_services = sum(s.subtotal for s in txn.services.all())
+                    total_miscs = sum(m.subtotal for m in txn.miscs.all()) # <-- Hitung Misc
                     
-                    txn.total_amount = total_items + total_services + txn.other_charges - txn.discount_amount
+                    # Rumus Total: Items + Jasa + Misc + Other Charges (Global) - Diskon
+                    txn.total_amount = total_items + total_services + total_miscs + txn.other_charges - txn.discount_amount
                     txn.save()
                     
                     log_activity(
@@ -155,10 +170,7 @@ def transaction_create(request):
                         f"Membuat transaksi baru {txn.invoice_number}"
                     )
                     
-                    messages.success(
-                        request, 
-                        f"✅ Transaksi {txn.invoice_number} berhasil dibuat!"
-                    )
+                    messages.success(request, f"✅ Transaksi {txn.invoice_number} berhasil dibuat!")
                     return redirect('transactions:transaction_detail', pk=txn.pk)
                     
             except ValidationError as e:
@@ -167,25 +179,25 @@ def transaction_create(request):
                 messages.error(request, f"❌ Terjadi kesalahan sistem: {str(e)}")
         else:
             messages.error(request, "❌ Gagal menyimpan. Mohon periksa kelengkapan input.")
-            # Debug errors
+            # Debugging errors agar muncul di notifikasi
             if form.errors:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f"Form error - {field}: {error}")
+                messages.error(request, f"Header Error: {form.errors}")
+            if misc_formset.errors:
+                messages.error(request, f"Biaya Lain Error: {misc_formset.errors}")
             if item_formset.errors:
-                messages.error(request, f"Item formset errors: {item_formset.errors}")
-            if service_formset.errors:
-                messages.error(request, f"Service formset errors: {service_formset.errors}")
+                messages.error(request, f"Item Error: {item_formset.errors}")
     else:
         form = TransactionForm()
         item_formset = TransactionItemFormSet(prefix='items')
         service_formset = TransactionServiceFormSet(prefix='services')
+        misc_formset = TransactionMiscFormSet(prefix='miscs') # <-- Init Formset Baru
 
     # Kirim data tambahan untuk template
     context = {
         'form': form,
         'item_formset': item_formset,
         'service_formset': service_formset,
+        'misc_formset': misc_formset, # <-- PENTING: Harus dikirim ke template
         'all_items': InventoryItem.objects.all().select_related('category'),
         'all_services': Service.objects.all(),
         'title': 'Buat Transaksi Baru'
@@ -211,8 +223,9 @@ def transaction_edit(request, pk):
         form = TransactionForm(request.POST, instance=txn)
         item_formset = TransactionItemFormSet(request.POST, instance=txn, prefix='items')
         service_formset = TransactionServiceFormSet(request.POST, instance=txn, prefix='services')
+        misc_formset = TransactionMiscFormSet(request.POST, instance=txn, prefix='miscs') # <-- Handle POST data
         
-        if form.is_valid() and item_formset.is_valid() and service_formset.is_valid():
+        if form.is_valid() and item_formset.is_valid() and service_formset.is_valid() and misc_formset.is_valid():
             try:
                 with transaction.atomic():
                     txn = form.save()
@@ -220,12 +233,14 @@ def transaction_edit(request, pk):
                     # Save formsets
                     item_formset.save()
                     service_formset.save()
+                    misc_formset.save() # <-- Save Misc
                     
                     # Hitung Ulang Total
                     total_items = sum(i.subtotal for i in txn.items.all())
                     total_services = sum(s.subtotal for s in txn.services.all())
+                    total_miscs = sum(m.subtotal for m in txn.miscs.all())
                     
-                    txn.total_amount = total_items + total_services + txn.other_charges - txn.discount_amount
+                    txn.total_amount = total_items + total_services + total_miscs + txn.other_charges - txn.discount_amount
                     txn.save()
                     
                     log_activity(
@@ -242,15 +257,19 @@ def transaction_edit(request, pk):
                 messages.error(request, f"❌ Error: {str(e)}")
         else:
             messages.error(request, "❌ Gagal update. Cek kembali form.")
+            if misc_formset.errors:
+                messages.error(request, f"Biaya Lain Error: {misc_formset.errors}")
     else:
         form = TransactionForm(instance=txn)
         item_formset = TransactionItemFormSet(instance=txn, prefix='items')
         service_formset = TransactionServiceFormSet(instance=txn, prefix='services')
+        misc_formset = TransactionMiscFormSet(instance=txn, prefix='miscs') # <-- Load Existing Data
 
     context = {
         'form': form,
         'item_formset': item_formset,
         'service_formset': service_formset,
+        'misc_formset': misc_formset, # <-- PENTING
         'transaction': txn,
         'all_items': InventoryItem.objects.all().select_related('category'),
         'all_services': Service.objects.all(),
@@ -431,6 +450,14 @@ def transaction_print_direct(request, pk):
             price = f"{svc.unit_price:,.0f}".replace(",", ".")
             subtotal = f"{svc.subtotal:,.0f}".replace(",", ".")
             send(f"{qty} x {price} = {subtotal}\n")
+
+        # Miscs (Biaya Lain-lain) - Logic Print Baru
+        for misc in txn.miscs.all():
+            send(f"{misc.description[:30]}\n")
+            qty = str(misc.quantity)
+            price = f"{misc.unit_price:,.0f}".replace(",", ".")
+            subtotal = f"{misc.subtotal:,.0f}".replace(",", ".")
+            send(f"{qty} x {price} = {subtotal}\n")
             
         send("--------------------------------\n")
         
@@ -439,6 +466,11 @@ def transaction_print_direct(request, pk):
         if txn.discount_amount > 0:
             disc = f"{txn.discount_amount:,.0f}".replace(",", ".")
             send(f"Diskon: -{disc}\n")
+        
+        # Print global other charges if exists
+        if txn.other_charges > 0:
+            oc = f"{txn.other_charges:,.0f}".replace(",", ".")
+            send(f"Biaya Lain (Global): {oc}\n")
             
         grand_total = f"{txn.total_amount:,.0f}".replace(",", ".")
         ep_out.write(CMD_BOLD_ON)
@@ -493,13 +525,8 @@ def api_get_item_price(request, item_id):
         return JsonResponse({
             'success': True,
             'price': float(item.sell_price),
-            
-            # 🔥 PERBAIKAN DI SINI: ganti item.stock menjadi item.quantity
-            # (Key json tetap 'stock' tidak apa-apa, karena JS membacanya sebagai data.stock)
             'stock': item.quantity, 
-            
             'name': item.name,
-            # 'unit': item.unit # Pastikan model kamu punya field unit, kalau tidak hapus baris ini
         })
     except Exception as e:
         return JsonResponse({

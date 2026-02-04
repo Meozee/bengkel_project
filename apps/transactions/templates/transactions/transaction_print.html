@@ -60,7 +60,6 @@
             margin-bottom: 2px;
             font-weight: bold; /* Nama barang tetap bold biar jelas */
             font-size: 11px;
-            /* text-transform: uppercase; <--- Opsional: Hapus komentar ini kalau mau huruf besar semua */
         }
 
         .qty-price {
@@ -95,6 +94,7 @@
 
     <div class="no-print">
         <button onclick="window.print()" style="padding:5px 10px; cursor:pointer;">🖨️ PRINT</button>
+        <a href="{% url 'transactions:transaction_detail' transaction.pk %}" style="padding:5px 10px; text-decoration:none; color:black; border:1px solid #000; background:#fff;">KEMBALI</a>
     </div>
 
     <div class="text-center">
@@ -118,10 +118,15 @@
             <span>Mek:</span>
             <span>{{ transaction.mechanic.name|default:"-"|truncatechars:15 }}</span>
         </div>
+        <div class="row">
+            <span>Plg:</span>
+            <span>{{ transaction.customer.name|default:"Umum"|truncatechars:15 }}</span>
+        </div>
     </div>
 
     <div class="divider"></div>
 
+    <!-- 1. BARANG INVENTORY -->
     {% for item in items %}
     <div style="margin-bottom: 5px;">
         <div class="item-name">{{ item.item.name }}</div>
@@ -138,9 +143,10 @@
     </div>
     {% endfor %}
 
+    <!-- 2. JASA SERVICE -->
     {% for svc in services %}
     <div style="margin-bottom: 5px;">
-        <div class="item-name">{{ svc.service.name }}</div>
+        <div class="item-name">{{ svc.service.name }} (Jasa)</div>
         <div class="row qty-price">
             <span>{{ svc.quantity }} x {{ svc.unit_price|floatformat:0 }}</span>
             <span>{{ svc.subtotal|floatformat:0 }}</span>
@@ -148,19 +154,32 @@
     </div>
     {% endfor %}
 
+    <!-- 3. BARANG NON-STOK / MISC (YANG BARU DITAMBAHKAN) -->
+    {% for misc in transaction.miscs.all %}
+    <div style="margin-bottom: 5px;">
+        <div class="item-name">{{ misc.description }}</div>
+        <div class="row qty-price">
+            <span>{{ misc.quantity }} x {{ misc.unit_price|floatformat:0 }}</span>
+            <span>{{ misc.subtotal|floatformat:0 }}</span>
+        </div>
+    </div>
+    {% endfor %}
+
     <div class="divider-solid"></div>
 
     <div>
+        <!-- DISKON GLOBAL -->
         {% if transaction.discount_amount > 0 %}
         <div class="row" style="font-size: 10px;">
-            <span>Diskon</span>
+            <span>Diskon Total</span>
             <span>-{{ transaction.discount_amount|floatformat:0 }}</span>
         </div>
         {% endif %}
         
+        <!-- BIAYA TAMBAHAN GLOBAL (OTHER CHARGES) -->
         {% if transaction.other_charges > 0 %}
         <div class="row" style="font-size: 10px;">
-            <span>Lain-lain</span>
+            <span>Biaya Tambahan</span>
             <span>{{ transaction.other_charges|floatformat:0 }}</span>
         </div>
         {% endif %}
@@ -181,6 +200,7 @@
 
     <script>
         window.onload = function() {
+            // Auto print setelah loading
             setTimeout(function(){ window.print(); }, 500);
         }
     </script>

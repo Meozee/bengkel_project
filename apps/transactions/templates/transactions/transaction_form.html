@@ -9,11 +9,7 @@
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 <style>
     .formset-row.deleted { display: none; }
-    
-    /* Fix tampilan Select2 agar tidak collapse */
     .select2-container { width: 100% !important; display: block; }
-    
-    /* Style tabel formset */
     .table-formset th { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
     .table-formset td { vertical-align: middle; }
 </style>
@@ -31,31 +27,35 @@
         </a>
     </div>
 
+    <!-- Tampilkan Error Messages di sini untuk debug -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <form method="post" id="transactionForm" novalidate>
         {% csrf_token %}
 
+        <!-- 1. INFO PELANGGAN -->
         <div class="card shadow-sm mb-4 border-primary border-top-3">
             <div class="card-header bg-white">
                 <h5 class="mb-0 text-primary fw-bold"><i class="bi bi-person-badge me-2"></i>Informasi Pelanggan</h5>
             </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-4">
-                        {{ form.customer|as_crispy_field }}
-                    </div>
-                    <div class="col-md-4">
-                        {{ form.vehicle|as_crispy_field }}
-                    </div>
-                    <div class="col-md-4">
-                        {{ form.mechanic|as_crispy_field }}
-                    </div>
-                    <div class="col-12">
-                        {{ form.notes|as_crispy_field }}
-                    </div>
+                    <div class="col-md-4">{{ form.customer|as_crispy_field }}</div>
+                    <div class="col-md-4">{{ form.vehicle|as_crispy_field }}</div>
+                    <div class="col-md-4">{{ form.mechanic|as_crispy_field }}</div>
+                    <div class="col-12">{{ form.notes|as_crispy_field }}</div>
                 </div>
             </div>
         </div>
 
+        <!-- 2. BARANG (ITEMS) -->
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <span class="fw-bold"><i class="bi bi-box-seam me-2"></i>Barang / Sparepart</span>
@@ -71,7 +71,7 @@
                             <tr>
                                 <th width="40%">Nama Barang</th>
                                 <th width="15%">Qty</th>
-                                <th width="20%">Harga Jual (@)</th>
+                                <th width="20%">Harga (@)</th>
                                 <th width="15%">Disc (%)</th>
                                 <th width="10%" class="text-center">Aksi</th>
                             </tr>
@@ -81,17 +81,16 @@
                             <tr class="formset-row item-row">
                                 {{ form.id }}
                                 <td class="p-2">
-                                    {{ form.item }} {% if form.item.errors %}
-                                    <div class="text-danger small mt-1">{{ form.item.errors.0 }}</div>
+                                    {{ form.item }}
+                                    {% if form.item.errors %}
+                                    <div class="text-danger small">{{ form.item.errors.0 }}</div>
                                     {% endif %}
                                 </td>
                                 <td class="p-2">{{ form.quantity }}</td>
                                 <td class="p-2">{{ form.unit_price }}</td>
                                 <td class="p-2">{{ form.discount_percentage }}</td>
                                 <td class="p-2 text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-danger remove-row" title="Hapus Baris">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
                                     <div class="d-none">{{ form.DELETE }}</div>
                                 </td>
                             </tr>
@@ -102,6 +101,7 @@
             </div>
         </div>
 
+        <!-- 3. JASA (SERVICES) -->
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <span class="fw-bold"><i class="bi bi-wrench-adjustable me-2"></i>Jasa Service</span>
@@ -131,9 +131,7 @@
                                 <td class="p-2">{{ form.unit_price }}</td>
                                 <td class="p-2">{{ form.discount_percentage }}</td>
                                 <td class="p-2 text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-danger remove-row">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
                                     <div class="d-none">{{ form.DELETE }}</div>
                                 </td>
                             </tr>
@@ -144,13 +142,60 @@
             </div>
         </div>
 
+        <!-- 4. BIAYA LAIN-LAIN (MISC) -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <span class="fw-bold"><i class="bi bi-list-check me-2"></i>Biaya Lain-lain (Non-Stok)</span>
+                <button type="button" class="btn btn-light btn-sm text-warning fw-bold shadow-sm" id="add-misc">
+                    <i class="bi bi-plus-lg me-1"></i>Tambah Biaya
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <!-- MANAGEMENT FORM INI WAJIB ADA -->
+                {{ misc_formset.management_form }}
+                
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0 table-formset">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="55%">Keterangan Biaya</th>
+                                <th width="15%">Qty</th>
+                                <th width="20%">Harga Satuan (@)</th>
+                                <th width="10%" class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="misc-tbody">
+                            {% for form in misc_formset %}
+                            <tr class="formset-row misc-row">
+                                {{ form.id }}
+                                <td class="p-2">
+                                    {{ form.description }}
+                                    {% if form.description.errors %}
+                                    <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                                    {% endif %}
+                                </td>
+                                <td class="p-2">{{ form.quantity }}</td>
+                                <td class="p-2">{{ form.unit_price }}</td>
+                                <td class="p-2 text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
+                                    <div class="d-none">{{ form.DELETE }}</div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. TOTAL & SUBMIT -->
         <div class="card shadow-sm bg-light mb-5 border-0">
             <div class="card-body">
                 <div class="row align-items-center">
                     <div class="col-md-6 border-end">
                         <div class="row g-2">
                             <div class="col-md-6">
-                                <label class="small fw-bold text-muted">Biaya Tambahan</label>
+                                <label class="small fw-bold text-muted">Biaya Tambahan Global</label>
                                 {{ form.other_charges }}
                             </div>
                             <div class="col-md-6">
@@ -162,20 +207,17 @@
                     <div class="col-md-6 text-end">
                         <h5 class="text-muted mb-1">Total Transaksi</h5>
                         <h2 class="text-primary fw-bold mb-3" id="grand-total">Rp 0</h2>
-                        
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <button type="submit" class="btn btn-primary btn-lg px-5 shadow">
-                                <i class="bi bi-save me-2"></i>SIMPAN TRANSAKSI
-                            </button>
-                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg px-5 shadow">
+                            <i class="bi bi-save me-2"></i>SIMPAN TRANSAKSI
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-
     </form>
 </div>
 
+<!-- HIDDEN EMPTY FORMS (TEMPLATE JAVASCRIPT) -->
 <table style="display:none">
     <tbody id="item-empty-form">
         <tr class="formset-row item-row">
@@ -184,10 +226,7 @@
             <td class="p-2">{{ item_formset.empty_form.quantity }}</td>
             <td class="p-2">{{ item_formset.empty_form.unit_price }}</td>
             <td class="p-2">{{ item_formset.empty_form.discount_percentage }}</td>
-            <td class="p-2 text-center">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
-                <div class="d-none">{{ item_formset.empty_form.DELETE }}</div>
-            </td>
+            <td class="p-2 text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button><div class="d-none">{{ item_formset.empty_form.DELETE }}</div></td>
         </tr>
     </tbody>
     <tbody id="service-empty-form">
@@ -197,189 +236,156 @@
             <td class="p-2">{{ service_formset.empty_form.quantity }}</td>
             <td class="p-2">{{ service_formset.empty_form.unit_price }}</td>
             <td class="p-2">{{ service_formset.empty_form.discount_percentage }}</td>
-            <td class="p-2 text-center">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button>
-                <div class="d-none">{{ service_formset.empty_form.DELETE }}</div>
-            </td>
+            <td class="p-2 text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button><div class="d-none">{{ service_formset.empty_form.DELETE }}</div></td>
+        </tr>
+    </tbody>
+    <!-- TEMPLATE UNTUK MISC -->
+    <tbody id="misc-empty-form">
+        <tr class="formset-row misc-row">
+            {{ misc_formset.empty_form.id }}
+            <td class="p-2">{{ misc_formset.empty_form.description }}</td>
+            <td class="p-2">{{ misc_formset.empty_form.quantity }}</td>
+            <td class="p-2">{{ misc_formset.empty_form.unit_price }}</td>
+            <td class="p-2 text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button><div class="d-none">{{ misc_formset.empty_form.DELETE }}</div></td>
         </tr>
     </tbody>
 </table>
-
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script>
     $(document).ready(function () {
-   
-    // --- 1. INISIALISASI SELECT2 ---
-    function initSelect2(element) {
-        var $el = $(element);
-        if ($el.data('select2') || $el.hasClass('select2-hidden-accessible')) return;
-
-        // Cek apakah ini select ITEM
-        if ($el.attr('name') && $el.attr('name').includes('item')) {
-            // Konfigurasi Khusus Item Transaksi dengan Custom Template
-            $el.select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: 'Cari barang...',
-                allowClear: true,
-                templateResult: formatItemWithStock,  // Custom display di dropdown
-                templateSelection: formatItemSelection, // Custom display saat dipilih
-                escapeMarkup: function(markup) { return markup; } // Izinkan HTML
-            });
-        } else {
-            // Config standar (Customer, Vehicle, Mechanic, Service)
-            $el.select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: 'Pilih opsi...',
-                allowClear: true
-            });
-        }
-    }
-
-    // Format tampilan di dropdown (dengan stok)
-    function formatItemWithStock(item) {
-        if (!item.id) {
-            return item.text;
+        // Init Select2
+        function initSelect2(element) {
+            var $el = $(element);
+            if ($el.data('select2') || $el.hasClass('select2-hidden-accessible')) return;
+            
+            if ($el.attr('name') && $el.attr('name').includes('item')) {
+                $el.select2({
+                    theme: 'bootstrap-5', width: '100%', placeholder: 'Cari barang...', allowClear: true,
+                    templateResult: function(item) {
+                        if (!item.id) return item.text;
+                        var stock = $(item.element).data('stock');
+                        if (stock !== undefined) {
+                            return $('<div><strong>' + item.text + '</strong><br><small class="' + (stock > 0 ? 'text-success' : 'text-danger') + '">Stok: ' + stock + '</small></div>');
+                        }
+                        return item.text;
+                    },
+                    escapeMarkup: function(m) { return m; }
+                });
+            } else {
+                $el.select2({ theme: 'bootstrap-5', width: '100%', placeholder: 'Pilih...', allowClear: true });
+            }
         }
         
-        // Ambil data stok dari attribute data-stock di option
-        var $option = $(item.element);
-        var stock = $option.data('stock');
-        
-        if (stock !== undefined) {
-            var stockClass = stock > 0 ? 'text-success' : 'text-danger';
-            return $(
-                '<div>' + 
-                    '<strong>' + item.text + '</strong>' +
-                    '<br><small class="' + stockClass + '">Stok: ' + stock + '</small>' +
-                '</div>'
-            );
+        // --- PERBAIKAN UTAMA DI SINI ---
+        // Batasi inisialisasi awal HANYA pada form utama, jangan sentuh template kosong!
+        $('#transactionForm select').each(function() { initSelect2(this); });
+
+        // ADD ROW LOGIC
+        function addRow(type) {
+            let prefix;
+            if (type === 'item') prefix = 'items';
+            else if (type === 'service') prefix = 'services';
+            else prefix = 'miscs'; // Penting: prefix 'miscs'
+
+            const tbodyId = `#${type}-tbody`;
+            const emptyId = `#${type}-empty-form`;
+            const totalInput = $(`#id_${prefix}-TOTAL_FORMS`); 
+
+            if ($(totalInput).length === 0) {
+                console.error("Management Form Missing for: " + prefix);
+                alert("Error: Form tidak terinisialisasi. Refresh halaman.");
+                return;
+            }
+
+            let idx = parseInt(totalInput.val());
+            // Ambil HTML dari template yang BERSIH (karena belum kena initSelect2)
+            let html = $(emptyId).html().replace(/__prefix__/g, idx);
+            $(tbodyId).append(html);
+            
+            // Inisialisasi Select2 HANYA pada baris baru yang baru saja ditambahkan
+            if(type !== 'misc') {
+                $(tbodyId).find('tr:last select').each(function() { initSelect2(this); });
+            }
+            
+            totalInput.val(idx + 1);
         }
-        
-        return item.text;
-    }
 
-    // Format tampilan saat item dipilih (tanpa stok, biar rapi)
-    function formatItemSelection(item) {
-        return item.text;
-    }
+        $('#add-item').click(function(e){ e.preventDefault(); addRow('item'); });
+        $('#add-service').click(function(e){ e.preventDefault(); addRow('service'); });
+        $('#add-misc').click(function(e){ e.preventDefault(); addRow('misc'); });
 
-    // Init pada elemen yang sudah ada saat load
-    $('select').each(function() { initSelect2(this); });
+        // REMOVE ROW LOGIC
+        $(document).on('click', '.remove-row', function (e) {
+            e.preventDefault();
+            let row = $(this).closest('tr');
+            let deleteInput = row.find('input[type="checkbox"][name$="-DELETE"]');
+            let hasId = row.find('input[type="hidden"][name$="-id"]').val();
+            let prefix;
 
+            if(row.hasClass('item-row')) prefix = 'items';
+            else if(row.hasClass('service-row')) prefix = 'services';
+            else prefix = 'miscs';
 
-    // --- 2. ADD ROW LOGIC ---
-    function addRow(type) {
-        const prefix = (type === 'item') ? 'items' : 'services';
-        const tbodyId = `#${type}-tbody`;
-        const emptyId = `#${type}-empty-form`;
-        const totalInput = $(`#id_${prefix}-TOTAL_FORMS`);
-
-        let idx = parseInt(totalInput.val());
-        let html = $(emptyId).html().replace(/__prefix__/g, idx);
-
-        $(tbodyId).append(html);
-       
-        // Init Select2 di baris baru
-        $(tbodyId).find('tr:last select').each(function() {
-            initSelect2(this);
+            if (hasId) {
+                deleteInput.prop('checked', true);
+                row.addClass('deleted');
+            } else {
+                row.remove();
+                let totalInput = $(`#id_${prefix}-TOTAL_FORMS`);
+                totalInput.val(parseInt(totalInput.val()) - 1);
+            }
+            calculateTotal();
         });
-       
-        totalInput.val(idx + 1);
-    }
 
-    $('#add-item').click(function (e) { e.preventDefault(); addRow('item'); });
-    $('#add-service').click(function (e) { e.preventDefault(); addRow('service'); });
+        // CALCULATE TOTAL
+        function calculateTotal() {
+            let grandTotal = 0;
+            $('.formset-row:not(.deleted)').each(function () {
+                let qty = parseFloat($(this).find('input[name$="-quantity"]').val()) || 0;
+                let price = parseFloat($(this).find('input[name$="-unit_price"]').val()) || 0;
+                let discInput = $(this).find('input[name$="-discount_percentage"]');
+                let discPercent = (discInput.length > 0) ? (parseFloat(discInput.val()) || 0) : 0;
+                
+                let subtotal = qty * price;
+                let discount = subtotal * (discPercent / 100);
+                grandTotal += (subtotal - discount);
+            });
 
+            let otherCharges = parseFloat($('input[name="other_charges"]').val()) || 0;
+            let finalDiscount = parseFloat($('input[name="discount_amount"]').val()) || 0;
 
-    // --- 3. REMOVE ROW LOGIC ---
-    $(document).on('click', '.remove-row', function (e) {
-        e.preventDefault();
-        let row = $(this).closest('tr');
-        let deleteInput = row.find('input[type="checkbox"][name$="-DELETE"]');
-        let hasId = row.find('input[type="hidden"][name$="-id"]').val();
-
-        if (hasId) {
-            deleteInput.prop('checked', true);
-            row.addClass('deleted');
-        } else {
-            row.remove();
-            let prefix = row.hasClass('item-row') ? 'items' : 'services';
-            let totalInput = $(`#id_${prefix}-TOTAL_FORMS`);
-            totalInput.val(parseInt(totalInput.val()) - 1);
+            grandTotal = grandTotal + otherCharges - finalDiscount;
+            $('#grand-total').text('Rp ' + grandTotal.toLocaleString('id-ID'));
         }
+
+        // Auto-fill Prices
+        $(document).on('change', 'select[name$="-item"]', function () {
+            let id = $(this).val();
+            let row = $(this).closest('tr');
+            if (id) {
+                $.get(`/transactions/api/item-price/${id}/`, function (data) {
+                    row.find('input[name$="-unit_price"]').val(data.price);
+                    calculateTotal();
+                });
+            }
+        });
+        
+        $(document).on('change', 'select[name$="-service"]', function () {
+            let id = $(this).val();
+            let row = $(this).closest('tr');
+            if (id) {
+                $.get(`/transactions/api/service-price/${id}/`, function (data) {
+                    row.find('input[name$="-unit_price"]').val(data.price);
+                    calculateTotal();
+                });
+            }
+        });
+
+        $(document).on('input change', 'input, select', calculateTotal);
         calculateTotal();
     });
-
-
-    // --- 4. AUTO-FILL PRICE & STOCK CHECK ---
-    $(document).on('change', 'select[name$="-item"]', function () {
-        let id = $(this).val();
-        let row = $(this).closest('tr');
-       
-        if (id) {
-            $.get(`/transactions/api/item-price/${id}/`, function (data) {
-                // Isi harga
-                row.find('input[name$="-unit_price"]').val(data.price);
-                
-                // Cek stok (opsional: bisa tampilkan warning jika stok habis)
-                if (data.stock !== undefined && data.stock <= 0) {
-                    alert('Peringatan: Stok barang ini habis!');
-                }
-                
-                calculateTotal();
-            }).fail(function() {
-                alert('Gagal mengambil data barang');
-            });
-        }
-    });
-
-    $(document).on('change', 'select[name$="-service"]', function () {
-        let id = $(this).val();
-        let row = $(this).closest('tr');
-       
-        if (id) {
-            $.get(`/transactions/api/service-price/${id}/`, function (data) {
-                row.find('input[name$="-unit_price"]').val(data.price);
-                calculateTotal();
-            }).fail(function() {
-                alert('Gagal mengambil data jasa');
-            });
-        }
-    });
-
-
-    // --- 5. CALCULATE TOTAL LOGIC ---
-    function calculateTotal() {
-        let grandTotal = 0;
-
-        $('.formset-row:not(.deleted)').each(function () {
-            let qty = parseFloat($(this).find('input[name$="-quantity"]').val()) || 0;
-            let price = parseFloat($(this).find('input[name$="-unit_price"]').val()) || 0;
-            let discPercent = parseFloat($(this).find('input[name$="-discount_percentage"]').val()) || 0;
-
-            let subtotal = qty * price;
-            let discount = subtotal * (discPercent / 100);
-           
-            grandTotal += (subtotal - discount);
-        });
-
-        let otherCharges = parseFloat($('input[name="other_charges"]').val()) || 0;
-        let finalDiscount = parseFloat($('input[name="discount_amount"]').val()) || 0;
-
-        grandTotal = grandTotal + otherCharges - finalDiscount;
-
-        $('#grand-total').text('Rp ' + grandTotal.toLocaleString('id-ID'));
-    }
-
-    // Trigger kalkulasi
-    $(document).on('input change', 'input, select', calculateTotal);
-    calculateTotal();
-});
 </script>
 {% endblock %}
