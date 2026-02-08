@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Struk #{{ transaction.invoice_number }}</title>
     <style>
-        /* --- CSS RESET KHUSUS THERMAL 58MM --- */
+        /* --- CSS RESET KHUSUS THERMAL 80MM (DRIVER GRAPHIC) --- */
         * {
             box-sizing: border-box;
             -webkit-print-color-adjust: exact;
@@ -13,21 +13,18 @@
         }
 
         @page {
-            size: 58mm auto;
+            size: 80mm auto;
             margin: 0mm;
         }
 
         body {
-            width: 45mm;     
+            width: 72mm; /* Lebar cetak efektif 80mm */
             margin: 0 auto;
-            padding: 5px 0;
+            padding: 2px 2mm 50px 2mm; /* 80px di bawah agar tidak mepet saat potong kertas */
             
-            /* KEMBALI KE FONT STANDARD YANG RAPI */
             font-family: 'Courier New', Courier, monospace;
-            font-size: 10px; /* Ukuran standar struk */
-            font-weight: normal; /* TIDAK BOLD SEMUA */
-            line-height: 1.2; 
-            
+            font-size: 12px;
+            line-height: 1.4; 
             background-color: #fff;
             color: #000;
         }
@@ -35,17 +32,17 @@
         /* --- UTILITY CLASSES --- */
         .text-center { text-align: center; }
         .text-right { text-align: right; }
-        .text-bold { font-weight: bold; } /* Class khusus untuk yang mau ditebalkan */
+        .text-bold { font-weight: 900 !important; }
         
         .divider {
-            border-top: 1px dashed #000; /* Garis kembali normal (1px) */
-            margin: 5px 0;
+            border-top: 1.5px dashed #000;
+            margin: 10px 0;
             width: 100%;
         }
 
         .divider-solid {
-            border-top: 1px solid #000;
-            margin: 5px 0;
+            border-top: 1.5px solid #000;
+            margin: 10px 0;
             width: 100%;
         }
 
@@ -53,155 +50,159 @@
             display: flex;
             justify-content: space-between;
             width: 100%;
+            align-items: flex-start;
         }
 
         .item-name {
             display: block;
             margin-bottom: 2px;
-            font-weight: bold; /* Nama barang tetap bold biar jelas */
-            font-size: 11px;
+            font-weight: 900 !important;
+            font-size: 13px;
+            text-transform: uppercase;
         }
 
         .qty-price {
-            font-size: 10px;
+            font-size: 12px;
+            margin-bottom: 5px;
         }
 
         .total-section {
-            font-size: 12px;
-            font-weight: bold;
+            font-size: 15px;
+            font-weight: 900 !important;
             margin-top: 5px;
-            border-top: 1px solid #000;
-            padding-top: 2px;
+            border-top: 1.5px solid #000;
+            padding-top: 6px;
         }
 
         .no-print {
             text-align: center;
-            margin-bottom: 10px;
-            font-family: sans-serif;
-            background: #eee;
-            padding: 10px;
-            font-size: 12px;
+            margin-bottom: 20px;
+            font-family: Arial, sans-serif;
+            background: #e9ecef;
+            padding: 20px;
             border-bottom: 1px solid #ccc;
         }
 
         @media print {
             .no-print { display: none !important; }
-            body { margin-left: 0mm; } 
+            body { margin: 0 auto; } 
         }
     </style>
 </head>
 <body>
 
     <div class="no-print">
-        <button onclick="window.print()" style="padding:5px 10px; cursor:pointer;">🖨️ PRINT</button>
-        <a href="{% url 'transactions:transaction_detail' transaction.pk %}" style="padding:5px 10px; text-decoration:none; color:black; border:1px solid #000; background:#fff;">KEMBALI</a>
+        <div style="margin-bottom: 10px; color: #333;">Pastikan Margin di Chrome diset ke <b>"None"</b></div>
+        <button onclick="window.print()" style="padding:10px 20px; cursor:pointer; font-weight:bold; background: #28a745; color: white; border: none; border-radius: 5px;">🖨️ CETAK STRUK SEKARANG</button>
+        <a href="{% url 'transactions:transaction_detail' transaction.pk %}" style="padding:10px 20px; text-decoration:none; color:black; border:1px solid #000; background:#fff; margin-left:10px; border-radius: 5px;">KEMBALI</a>
     </div>
 
     <div class="text-center">
-        <div style="font-size: 12px; font-weight: bold;">{{ shop_name }}</div>
-        <div style="font-size: 10px;">{{ shop_address }}</div>
-        <div style="font-size: 10px;">{{ shop_phone }}</div>
+        <div style="font-size: 18px; font-weight: 900 !important; text-transform: uppercase;">{{ shop_name }}</div>
+        <div style="font-size: 11px;">{{ shop_address }}</div>
+        <div style="font-size: 11px;">Telp: {{ shop_phone }}</div>
     </div>
 
     <div class="divider"></div>
 
-    <div style="font-size: 10px;">
+    <div style="font-size: 12px;">
         <div class="row">
-            <span>No:</span>
-            <span>{{ transaction.invoice_number }}</span>
+            <span>No. Invoice</span>
+            <span class="text-bold">#{{ transaction.invoice_number }}</span>
         </div>
         <div class="row">
-            <span>Tgl:</span>
+            <span>Tanggal</span>
             <span>{{ transaction.created_at|date:"d/m/y H:i" }}</span>
         </div>
         <div class="row">
-            <span>Mek:</span>
-            <span>{{ transaction.mechanic.name|default:"-"|truncatechars:15 }}</span>
+            <span>Mekanik</span>
+            <span>{{ transaction.mechanic.name|default:"-"|truncatechars:20 }}</span>
         </div>
         <div class="row">
-            <span>Plg:</span>
-            <span>{{ transaction.customer.name|default:"Umum"|truncatechars:15 }}</span>
+            <span>Pelanggan</span>
+            <span>{{ transaction.customer.name|default:"Umum"|truncatechars:20 }}</span>
         </div>
     </div>
 
-    <div class="divider"></div>
+    <div class="divider-solid"></div>
 
-    <!-- 1. BARANG INVENTORY -->
-    {% for item in items %}
-    <div style="margin-bottom: 5px;">
-        <div class="item-name">{{ item.item.name }}</div>
-        <div class="row qty-price">
-            <span>{{ item.quantity }} x {{ item.unit_price|floatformat:0 }}</span>
-            <span>{{ item.subtotal|floatformat:0 }}</span>
+    <div class="items-list">
+        {% for item in items %}
+        <div style="margin-bottom: 10px;">
+            <div class="item-name">{{ item.item.name }}</div>
+            <div class="row qty-price">
+                <span>{{ item.quantity }} x {{ item.unit_price|floatformat:0 }}</span>
+                <span>{{ item.subtotal|floatformat:0 }}</span>
+            </div>
+            {% if item.discount_amount > 0 %}
+            <div class="row" style="font-size: 11px; font-style: italic;">
+                <span>(Potongan Harga)</span>
+                <span>-{{ item.discount_amount|floatformat:0 }}</span>
+            </div>
+            {% endif %}
         </div>
-        {% if item.discount_amount > 0 %}
-        <div class="row" style="font-size: 9px; font-style: italic;">
-            <span>(Disc)</span>
-            <span>-{{ item.discount_amount|floatformat:0 }}</span>
-        </div>
-        {% endif %}
-    </div>
-    {% endfor %}
+        {% endfor %}
 
-    <!-- 2. JASA SERVICE -->
-    {% for svc in services %}
-    <div style="margin-bottom: 5px;">
-        <div class="item-name">{{ svc.service.name }} (Jasa)</div>
-        <div class="row qty-price">
-            <span>{{ svc.quantity }} x {{ svc.unit_price|floatformat:0 }}</span>
-            <span>{{ svc.subtotal|floatformat:0 }}</span>
+        {% for svc in services %}
+        <div style="margin-bottom: 10px;">
+            <div class="item-name">{{ svc.service.name }} (Jasa)</div>
+            <div class="row qty-price">
+                <span>{{ svc.quantity }} x {{ svc.unit_price|floatformat:0 }}</span>
+                <span class="text-bold">{{ svc.subtotal|floatformat:0 }}</span>
+            </div>
         </div>
-    </div>
-    {% endfor %}
+        {% endfor %}
 
-    <!-- 3. BARANG NON-STOK / MISC (YANG BARU DITAMBAHKAN) -->
-    {% for misc in transaction.miscs.all %}
-    <div style="margin-bottom: 5px;">
-        <div class="item-name">{{ misc.description }}</div>
-        <div class="row qty-price">
-            <span>{{ misc.quantity }} x {{ misc.unit_price|floatformat:0 }}</span>
-            <span>{{ misc.subtotal|floatformat:0 }}</span>
+        {% for misc in transaction.miscs.all %}
+        <div style="margin-bottom: 10px;">
+            <div class="item-name">{{ misc.description }}</div>
+            <div class="row qty-price">
+                <span>{{ misc.quantity }} x {{ misc.unit_price|floatformat:0 }}</span>
+                <span>{{ misc.subtotal|floatformat:0 }}</span>
+            </div>
         </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 
     <div class="divider-solid"></div>
 
     <div>
-        <!-- DISKON GLOBAL -->
         {% if transaction.discount_amount > 0 %}
-        <div class="row" style="font-size: 10px;">
-            <span>Diskon Total</span>
+        <div class="row">
+            <span>Diskon Global</span>
             <span>-{{ transaction.discount_amount|floatformat:0 }}</span>
         </div>
         {% endif %}
         
-        <!-- BIAYA TAMBAHAN GLOBAL (OTHER CHARGES) -->
         {% if transaction.other_charges > 0 %}
-        <div class="row" style="font-size: 10px;">
-            <span>Biaya Tambahan</span>
+        <div class="row">
+            <span>Biaya Lainnya</span>
             <span>{{ transaction.other_charges|floatformat:0 }}</span>
         </div>
         {% endif %}
 
         <div class="row total-section">
-            <span>TOTAL</span>
+            <span>TOTAL AKHIR</span>
             <span>Rp {{ transaction.total_amount|floatformat:0 }}</span>
         </div>
     </div>
 
     <div class="divider"></div>
 
-    <div class="text-center" style="margin-top: 5px; font-size: 10px;">
-        Terima Kasih<br>
-        Barang yg dibeli tdk dpt ditukar<br>
-        <br>.
+    <div class="text-center" style="margin-top: 10px; font-size: 11px;">
+        <span class="text-bold">Terima Kasih Atas Kepercayaan Anda</span><br>
+        Layanan Bengkel Jatiwangi Motor<br>
+        <i>Barang yang dibeli tidak dapat ditukar</i><br>
+        <i>Jika ada masalah, silakan hubungi kami</i>
+        <br><br>
+        *** LAYANAN BENGKEL ***
     </div>
 
     <script>
         window.onload = function() {
-            // Auto print setelah loading
-            setTimeout(function(){ window.print(); }, 500);
+            setTimeout(function(){ 
+                window.print(); 
+            }, 800);
         }
     </script>
 </body>

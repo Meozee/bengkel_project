@@ -27,7 +27,6 @@ class Vehicle(models.Model):
     brand = models.CharField(max_length=100) # Merek, e.g., Toyota
     model = models.CharField(max_length=100) # Model, e.g., Avanza
     year = models.PositiveIntegerField(blank=True, null=True)
-
     def __str__(self):
         return f"{self.license_plate} ({self.brand} {self.model})"
 
@@ -35,6 +34,7 @@ class Service(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Standard price for this service")
+    is_active = models.BooleanField(default=True, verbose_name="Status Aktif")
 
     def __str__(self):
         return self.name

@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
-
+from django.contrib.auth.decorators import login_required # Import tambahan
 # Import Helper Logging yang sudah kita buat
 from apps.accounts.utils import log_activity
 from apps.accounts.models import CustomUser
@@ -131,75 +131,100 @@ class BaseDeleteView(LoginRequiredMixin, UserPassesTestMixin, SuccessMessageMixi
 class CustomerListView(BaseListView):
     model = Customer
     template_name = 'master_data/customer_list.html'
-
 class CustomerCreateView(BaseCreateView):
     model = Customer
     form_class = CustomerForm
     success_url = reverse_lazy('master_data:customer_list')
-
 class CustomerUpdateView(BaseUpdateView):
     model = Customer
     form_class = CustomerForm
     success_url = reverse_lazy('master_data:customer_list')
-
 class CustomerDeleteView(BaseDeleteView):
     model = Customer
     success_url = reverse_lazy('master_data:customer_list')
 
-
-# === Mechanic Views ===
 class MechanicListView(BaseListView):
     model = Mechanic
     template_name = 'master_data/mechanic_list.html'
-
 class MechanicCreateView(BaseCreateView):
     model = Mechanic
     form_class = MechanicForm
     success_url = reverse_lazy('master_data:mechanic_list')
-
 class MechanicUpdateView(BaseUpdateView):
     model = Mechanic
     form_class = MechanicForm
     success_url = reverse_lazy('master_data:mechanic_list')
-
 class MechanicDeleteView(BaseDeleteView):
     model = Mechanic
     success_url = reverse_lazy('master_data:mechanic_list')
 
-
-# === Vehicle Views ===
 class VehicleListView(BaseListView): 
-    # Note: Kita ganti jadi BaseListView biar kena LoginRequired juga
     model = Vehicle
     template_name = 'master_data/vehicle_list.html'
-    
     def get_queryset(self):
-        # Override khusus karena vehicle cari berdasarkan plat no
         queryset = super(ListView, self).get_queryset().select_related('customer')
         query = self.request.GET.get('q')
         if query:
             queryset = queryset.filter(license_plate__icontains=query)
         return queryset
-        
 class VehicleCreateView(BaseCreateView):
     model = Vehicle
     form_class = VehicleForm
     success_url = reverse_lazy('master_data:vehicle_list')
-
 class VehicleUpdateView(BaseUpdateView):
     model = Vehicle
     form_class = VehicleForm
     success_url = reverse_lazy('master_data:vehicle_list')
-
 class VehicleDeleteView(BaseDeleteView):
     model = Vehicle
     success_url = reverse_lazy('master_data:vehicle_list')
 
+class VendorListView(BaseListView):
+    model = Vendor
+    template_name = 'master_data/vendor_list.html'
+class VendorCreateView(BaseCreateView):
+    model = Vendor
+    form_class = VendorForm
+    success_url = reverse_lazy('master_data:vendor_list')
+class VendorUpdateView(BaseUpdateView):
+    model = Vendor
+    form_class = VendorForm
+    success_url = reverse_lazy('master_data:vendor_list')
+class VendorDeleteView(BaseDeleteView):
+    model = Vendor
+    success_url = reverse_lazy('master_data:vendor_list')
 
-# === Service Views ===
+
+# =================================================================
+# SERVICE VIEWS (UPDATED FOR TABS & ACTIVE STATUS)
+# =================================================================
+
 class ServiceListView(BaseListView):
     model = Service
     template_name = 'master_data/service_list.html'
+    paginate_by = 10 # Ubah angka ini sesuai kebutuhan (data per tab halaman)
+
+    def get_queryset(self):
+        # Ambil queryset dasar (termasuk filter search 'q')
+        queryset = super().get_queryset()
+        
+        # Ambil parameter 'status' dari URL (default 'active')
+        status = self.request.GET.get('status', 'active')
+        
+        if status == 'inactive':
+            # Jika tab Inactive dipilih, tampilkan yang is_active=False
+            queryset = queryset.filter(is_active=False)
+        else:
+            # Default tab Active, tampilkan yang is_active=True
+            queryset = queryset.filter(is_active=True)
+            
+        return queryset.order_by('name')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Kirim status saat ini ke template untuk logika Tab active class
+        context['current_status'] = self.request.GET.get('status', 'active')
+        return context
 
 class ServiceCreateView(BaseCreateView):
     model = Service
@@ -215,22 +240,29 @@ class ServiceDeleteView(BaseDeleteView):
     model = Service
     success_url = reverse_lazy('master_data:service_list')
 
-
-# === Vendor Views ===
-class VendorListView(BaseListView):
-    model = Vendor
-    template_name = 'master_data/vendor_list.html'
-
-class VendorCreateView(BaseCreateView):
-    model = Vendor
-    form_class = VendorForm
-    success_url = reverse_lazy('master_data:vendor_list')
-
-class VendorUpdateView(BaseUpdateView):
-    model = Vendor
-    form_class = VendorForm
-    success_url = reverse_lazy('master_data:vendor_list')
-
-class VendorDeleteView(BaseDeleteView):
-    model = Vendor
-    success_url = reverse_lazy('master_data:vendor_list')
+# --- VIEW BARU: Toggle Active/Inactive ---
+@login_required
+def service_toggle_status(request, pk):
+    service = get_object_or_404(Service, pk=pk)
+    
+    # Toggle status
+    old_status = service.is_active
+    service.is_active = not service.is_active
+    service.save()
+    
+    status_msg = "diaktifkan" if service.is_active else "dinonaktifkan"
+    messages.success(request, f"Jasa '{service.name}' berhasil {status_msg}.")
+    
+    # Log Activity
+    log_activity(
+        request,
+        action_type='UPDATE',
+        target_model='Service',
+        target_id=service.pk,
+        details=f"Mengubah status jasa {service.name} menjadi {'Aktif' if service.is_active else 'Non-Aktif'}"
+    )
+    
+    # Redirect kembali ke list (tetap di tab yang sesuai atau default)
+    # Jika dia tadinya aktif lalu dimatikan, kita tetap di tab active agar user lihat dia hilang,
+    # atau redirect ke tab inactive. Biasanya redirect ke list saja.
+    return redirect('master_data:service_list')

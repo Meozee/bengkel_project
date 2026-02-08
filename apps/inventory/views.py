@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.db.models import Q, F
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger 
 import json
 
 # Import Security & Logging Custom
@@ -49,41 +50,56 @@ def get_category_specs(request, category_id):
 @login_required
 def inventory_list(request):
     """
-    Menampilkan daftar barang.
-    LOGIC: Hanya menampilkan item yang STATUS-nya AKTIF (Soft Delete aman).
+    Menampilkan daftar barang dengan PAGINATION (20 item per halaman).
     """
-    # ✅ FILTER UTAMA: Hanya tampilkan item yang AKTIF
-    items = InventoryItem.objects.filter(is_active=True).select_related('category')
+    # 1. Query Dasar
+    items = InventoryItem.objects.filter(is_active=True).select_related('category').order_by('-id') 
+    # Note: .order_by('-id') atau nama penting agar urutan paginasi konsisten
     
-    # ✅ FILTER KATEGORI: Hanya tampilkan kategori yang AKTIF
     categories = Category.objects.filter(is_active=True)
     selected_category_obj = None
 
-    # 1. Filter Pencarian Teks
-    query = request.GET.get('q')
+    # 2. Filter Pencarian Teks
+    query = request.GET.get('q', '')
     if query:
         items = items.filter(
             Q(name__icontains=query) | Q(sku__icontains=query)
         )
 
-    # 2. Filter Kategori
-    category_id = request.GET.get('category')
+    # 3. Filter Kategori
+    category_id = request.GET.get('category', '')
     if category_id:
         items = items.filter(category_id=category_id)
         selected_category_obj = Category.objects.filter(id=category_id).first()
 
-    # 3. Filter Status Stok
-    stock_status = request.GET.get('stock_status')
+    # 4. Filter Status Stok
+    stock_status = request.GET.get('stock_status', '')
     if stock_status == 'low':
         items = items.filter(quantity__lte=F('reorder_threshold'))
     
+    # ==========================================
+    # LOGIKA PAGINATION (Tab 1, 2, dst)
+    # ==========================================
+    page_number = request.GET.get('page', 1) # Ambil nomor halaman dari URL, default 1
+    paginator = Paginator(items, 20) # Batasi 20 item per halaman
+
+    try:
+        items_paginated = paginator.page(page_number)
+    except PageNotAnInteger:
+        # Jika parameter page bukan angka, kembali ke halaman 1
+        items_paginated = paginator.page(1)
+    except EmptyPage:
+        # Jika page diluar jangkauan (misal page 999), ambil halaman terakhir
+        items_paginated = paginator.page(paginator.num_pages)
+
     context = {
-        'items': items,
+        'items': items_paginated, # Kirim objek yang sudah dipaginasi
         'categories': categories,
-        'current_query': query or '',
+        'current_query': query,
         'current_category': int(category_id) if category_id and category_id.isdigit() else '',
         'selected_category_obj': selected_category_obj,
-        'current_stock_status': stock_status or '',
+        'current_stock_status': stock_status,
+        'paginator': paginator, # Opsional, untuk info total halaman
     }
     return render(request, 'inventory/inventory_list.html', context)
 

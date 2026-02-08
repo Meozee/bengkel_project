@@ -49,8 +49,11 @@
     </div>
 
     <div class="card mb-4 shadow-sm">
-        <div class="card-header">
-            <i class="fas fa-warehouse"></i> Daftar Item Aktif
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-warehouse"></i> Daftar Item Aktif</span>
+            <span class="badge bg-info text-dark">
+                Total: {{ items.paginator.count }} Barang
+            </span>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -60,13 +63,11 @@
                             <th>Nama Item</th>
                             <th>SKU</th>
                             <th>Kategori</th>
-                            
                             {% if selected_category_obj and selected_category_obj.required_specs %}
                                 {% with specs=selected_category_obj.required_specs %}
                                     <th class="table-info text-center" colspan="100%">Spesifikasi: {{ specs }}</th>
                                 {% endwith %}
                             {% endif %}
-                            
                             <th>Stok</th>
                             <th>Harga Jual</th>
                             <th style="width: 150px;">Aksi</th>
@@ -85,7 +86,7 @@
                             </td>
                             <td>{{ item.sku|default:"-" }}</td>
                             <td>{{ item.category.name|default:"-" }}</td>
-
+                            
                             {% if selected_category_obj and selected_category_obj.required_specs %}
                                 <td colspan="100%">
                                     {% for key, val in item.extra_specs.items %}
@@ -102,22 +103,62 @@
                             <td class="text-end">Rp {{ item.sell_price|intcomma }}</td>
                             <td class="text-center">
                                 <a href="{% url 'inventory:inventory_update' item.pk %}" class="btn btn-sm btn-outline-primary w-100">
-                                    <i class="fas fa-edit"></i> Edit / Status
+                                    <i class="fas fa-edit"></i> Edit
                                 </a>
-                                </td>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
                             <td colspan="8" class="text-center py-4 text-muted">
                                 <i class="fas fa-box-open fa-3x mb-3 text-secondary"></i><br>
-                                Tidak ada item aktif yang ditemukan.<br>
-                                <small>Cek filter atau tambahkan item baru.</small>
+                                Tidak ada item ditemukan.
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+
+            {% if items.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    
+                    {% if items.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ items.previous_page_number }}&q={{ current_query }}&category={{ current_category }}&stock_status={{ current_stock_status }}">
+                                &laquo; Sebelumnya
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">&laquo; Sebelumnya</span></li>
+                    {% endif %}
+
+                    {% for i in items.paginator.page_range %}
+                        {% if items.number == i %}
+                            <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                        {% elif i > items.number|add:'-3' and i < items.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ i }}&q={{ current_query }}&category={{ current_category }}&stock_status={{ current_stock_status }}">{{ i }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if items.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ items.next_page_number }}&q={{ current_query }}&category={{ current_category }}&stock_status={{ current_stock_status }}">
+                                Selanjutnya &raquo;
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">Selanjutnya &raquo;</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            <div class="text-center text-muted small">
+                Halaman {{ items.number }} dari {{ items.paginator.num_pages }}
+            </div>
+            {% endif %}
+
         </div>
     </div>
 </div>

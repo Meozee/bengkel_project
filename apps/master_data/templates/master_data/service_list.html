@@ -5,38 +5,141 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-card-checklist"></i> Daftar Jasa / Service</h1>
-    <a href="{% url 'master_data:service_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Tambah Jasa</a>
+    <a href="{% url 'master_data:service_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Tambah Jasa
+    </a>
 </div>
 
 <div class="card shadow-sm">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link {% if current_status == 'active' %}active fw-bold{% endif %}" 
+                   href="?status=active{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                   <i class="bi bi-check-circle-fill text-success"></i> Jasa Aktif
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if current_status == 'inactive' %}active fw-bold{% endif %}" 
+                   href="?status=inactive{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                   <i class="bi bi-x-circle-fill text-secondary"></i> Tidak Aktif / Arsip
+                </a>
+            </li>
+        </ul>
+    </div>
+
     <div class="card-body">
+        
+        <form method="get" class="mb-3">
+            <input type="hidden" name="status" value="{{ current_status }}">
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Cari nama jasa..." value="{{ request.GET.q }}">
+                <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i> Cari</button>
+            </div>
+        </form>
+
         <div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Nama Jasa</th>
                         <th>Harga</th>
+                        <th>Status</th>
                         <th class="text-end">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for service in object_list %}
-                    <tr>
-                        <td><strong>{{ service.name }}</strong></td>
+                    <tr class="{% if not service.is_active %}table-secondary text-muted{% endif %}">
+                        <td>
+                            <strong>{{ service.name }}</strong>
+                            {% if service.description %}
+                                <br><small class="text-muted">{{ service.description|truncatewords:10 }}</small>
+                            {% endif %}
+                        </td>
                         <td>Rp {{ service.price|floatformat:0 }}</td>
+                        <td>
+                            {% if service.is_active %}
+                                <span class="badge bg-success">Aktif</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Non-Aktif</span>
+                            {% endif %}
+                        </td>
                         <td class="text-end">
-                            <a href="{% url 'master_data:service_update' service.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
-                            <a href="{% url 'master_data:service_delete' service.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></a>
+                            <a href="{% url 'master_data:service_update' service.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+
+                            {% if service.is_active %}
+                                <a href="{% url 'master_data:service_toggle' service.pk %}" 
+                                   class="btn btn-sm btn-outline-warning" 
+                                   title="Non-aktifkan (Sembunyikan)"
+                                   onclick="return confirm('Apakah Anda yakin ingin menonaktifkan jasa ini? Jasa akan pindah ke tab Tidak Aktif.')">
+                                    <i class="bi bi-eye-slash"></i>
+                                </a>
+                            {% else %}
+                                <a href="{% url 'master_data:service_toggle' service.pk %}" 
+                                   class="btn btn-sm btn-outline-success" 
+                                   title="Aktifkan Kembali"
+                                   onclick="return confirm('Aktifkan kembali jasa ini?')">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </a>
+                            {% endif %}
+
+                            {% if user.role == 'OWNER' %}
+                            <a href="{% url 'master_data:service_delete' service.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus Permanen">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3" class="text-center text-muted py-4">Belum ada data jasa.</td>
+                        <td colspan="4" class="text-center text-muted py-5">
+                            {% if current_status == 'active' %}
+                                Tidak ada jasa yang aktif.
+                            {% else %}
+                                Tidak ada jasa yang dinonaktifkan.
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        {% if is_paginated %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ current_status }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Sebelumnya</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Sebelumnya</span></li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}&status={{ current_status }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ current_status }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Selanjutnya</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Selanjutnya</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
     </div>
 </div>
 

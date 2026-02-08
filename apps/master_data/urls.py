@@ -30,6 +30,8 @@ urlpatterns = [
     path('services/new/', views.ServiceCreateView.as_view(), name='service_create'),
     path('services/<int:pk>/edit/', views.ServiceUpdateView.as_view(), name='service_update'),
     path('services/<int:pk>/delete/', views.ServiceDeleteView.as_view(), name='service_delete'),
+    # --- TAMBAHAN BARU DI SINI ---
+    path('services/<int:pk>/toggle/', views.service_toggle_status, name='service_toggle'),
 
     # Vendor URLs
     path('vendors/', views.VendorListView.as_view(), name='vendor_list'),
