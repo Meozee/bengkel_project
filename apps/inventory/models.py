@@ -1,7 +1,5 @@
-#apps/inventory/models.py
 from decimal import Decimal
 from django.db import models
-
 
 class Category(models.Model):
     name = models.CharField(max_length=200, unique=True)
@@ -11,11 +9,11 @@ class Category(models.Model):
         blank=True,
         help_text="Masukkan nama spesifikasi dipisahkan koma. Contoh: Volume, SAE, Type"
     )
-    # ✅ SOFT DELETE FIELD
     is_active = models.BooleanField(default=True, help_text="Jika tidak dicentang, kategori ini akan disembunyikan.")
 
     class Meta:
         verbose_name_plural = "Categories"
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -32,17 +30,24 @@ class InventoryItem(models.Model):
     sku = models.CharField(max_length=100, unique=True, blank=True, null=True, help_text="Stock Keeping Unit")
     description = models.TextField(blank=True)
 
+    # --- PRICING ---
     buy_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    sell_price = models.DecimalField(max_digits=10, decimal_places=2)
+    sell_price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Harga jual barang saja")
+    
+    # 🔥 CHANGE: Field install_price & install_service_name DIHAPUS.
+    # Kita menggunakan model VehicleServicePrice (One-to-Many) di bawah.
 
     quantity = models.PositiveIntegerField(default=0)
     reorder_threshold = models.PositiveIntegerField(default=10)
     
-    # 🔥 FIX: Tambahkan null=True untuk backward compatibility
     extra_specs = models.JSONField(default=dict, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
 
-    # ✅ SOFT DELETE FIELD
-    is_active = models.BooleanField(default=True, help_text="Jika Non-Aktif, item tidak akan muncul di list penjualan.")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Tanggal Masuk")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
 
     def __str__(self):
         return f"{self.name} ({self.sku or 'No SKU'})"
@@ -50,6 +55,21 @@ class InventoryItem(models.Model):
     @property
     def is_low_stock(self):
         return self.quantity <= self.reorder_threshold
+
+
+class VehicleServicePrice(models.Model):
+    """
+    Tabel ini menyimpan variasi harga jasa pasang untuk satu barang.
+    Contoh: 
+    - Item: Aki GS Astra -> Vehicle: NMAX -> Price: 20.000
+    - Item: Aki GS Astra -> Vehicle: Beat -> Price: 10.000
+    """
+    item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name='service_prices')
+    vehicle_type = models.CharField(max_length=100, help_text="Contoh: NMAX, Beat, Sport 150cc")
+    price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Harga jasa pasang")
+    
+    def __str__(self):
+        return f"{self.vehicle_type}: {self.price}"
 
 
 class InventoryLog(models.Model):

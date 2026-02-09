@@ -4,87 +4,186 @@
 {% block title %}Laporan Kinerja Mekanik{% endblock %}
 
 {% block content %}
-<h1><i class="bi bi-person-gear"></i> Laporan Kinerja Mekanik</h1>
+<div class="container-fluid px-4 mt-4">
+    <h2 class="mb-4 text-info"><i class="bi bi-person-gear me-2"></i>Laporan Kinerja Mekanik</h2>
 
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <!-- PERUBAHAN: method="get", action dihapus (submit ke diri sendiri), csrf dihapus -->
-        <form method="get">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label for="mechanic" class="form-label">Pilih Mekanik</label>
-                    <select name="mechanic" id="mechanic" class="form-select" required>
-                        <option value="">--- Pilih Mekanik ---</option>
-                        {% for m in mechanics %}
-                        <option value="{{ m.pk }}" {% if selected_mechanic_id == m.pk %}selected{% endif %}>{{ m.name }}</option>
-                        {% endfor %}
-                    </select>
+    <!-- FILTER -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small">Pilih Mekanik (Bisa Lebih dari 1)</label>
+                        <select name="mechanic" class="form-select select2-multi" multiple>
+                            {% for m in mechanics %}
+                            <option value="{{ m.pk }}" {% if m.pk in selected_ids %}selected{% endif %}>{{ m.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text small">*Kosongkan untuk memilih semua mekanik</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small">Tanggal Mulai</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small">Tanggal Selesai</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-info text-white w-100 fw-bold"><i class="bi bi-search"></i> Tampilkan</button>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <label for="start_date" class="form-label">Tanggal Mulai</label>
-                    <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
-                </div>
-                <div class="col-md-3">
-                    <label for="end_date" class="form-label">Tanggal Selesai</label>
-                    <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Generate</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-{% if report_data %}
-<div class="card shadow-sm">
-    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-        <div>
-            <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i> {{ report_data.mechanic.name }}</h5>
-            <small>Periode: {{ report_data.start_date|date:"d M Y" }} - {{ report_data.end_date|date:"d M Y" }}</small>
+            </form>
         </div>
-        <a href="{% url 'reports:export_mechanic' %}?mechanic={{ selected_mechanic_id }}&start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-light btn-sm text-info fw-bold">
-            <i class="bi bi-file-earmark-excel"></i> Export Excel
+    </div>
+
+    {% if report_data %}
+    
+    <div class="d-flex justify-content-end mb-3">
+        <!-- Buat URL Query String Manual untuk Export karena Multiple Select -->
+        <a href="{% url 'reports:export_mechanic' %}?start_date={{ start_date }}&end_date={{ end_date }}{% for id in selected_ids %}&mechanic={{ id }}{% endfor %}" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel me-2"></i>Export Excel Lengkap
         </a>
     </div>
-    <div class="card-body">
-        <div class="row text-center">
-            <div class="col-md-3 border-end">
-                <h6 class="text-muted">Total Pekerjaan</h6>
-                <h2 class="fw-bold text-primary">{{ report_data.total_jobs }}</h2>
-                <small>Unit Kendaraan</small>
-            </div>
-            <div class="col-md-3 border-end">
-                <h6 class="text-muted">Pendapatan Dihasilkan</h6>
-                <h2 class="fw-bold text-success">Rp {{ report_data.total_revenue|intcomma }}</h2>
-                <small>Omzet Service</small>
-            </div>
-            <div class="col-md-3 border-end">
-                <h6 class="text-muted">Rata-rata Durasi</h6>
-                <h2 class="fw-bold text-warning">{{ report_data.avg_duration_str }}</h2>
-                <small>Per Kendaraan</small>
-            </div>
-            <div class="col-md-3">
-                <h6 class="text-muted">Spesialisasi (Top Service)</h6>
-                <h4 class="fw-bold text-dark mt-2">{{ report_data.top_service }}</h4>
-                <small class="badge bg-secondary">{{ report_data.top_service_count }} kali dikerjakan</small>
+
+    <!-- LOOP PER MEKANIK -->
+    <div class="row g-4">
+        {% for data in report_data %}
+        <div class="col-12">
+            <div class="card shadow-sm border-top border-4 border-info">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-person-badge me-2"></i>{{ data.mechanic_name }}</h5>
+                    <div class="badge bg-info text-dark bg-opacity-25 fs-6 px-3 py-2">
+                        Kontribusi Bersih: Rp {{ data.net_contribution|intcomma }}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- SUMMARY CARDS -->
+                    <div class="row text-center mb-4 g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded border">
+                                <div class="text-muted small text-uppercase">Total Pekerjaan</div>
+                                <div class="fs-3 fw-bold text-dark">{{ data.total_jobs }}</div>
+                                <div class="small text-muted">Transaksi</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded border">
+                                <div class="text-muted small text-uppercase">Pendapatan Service</div>
+                                <div class="fs-3 fw-bold text-success">Rp {{ data.total_revenue|intcomma }}</div>
+                                <div class="small text-muted">Omzet</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded border">
+                                <div class="text-muted small text-uppercase">Pengeluaran / Belanja</div>
+                                <div class="fs-3 fw-bold text-danger">Rp {{ data.total_expense|intcomma }}</div>
+                                <div class="small text-muted">Sparepart Luar / Reimburse</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DETAIL JOBS ACCORDION -->
+                    <div class="accordion" id="accordion-{{ forloop.counter }}">
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed bg-light rounded shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ forloop.counter }}">
+                                    <i class="bi bi-list-task me-2"></i> Lihat Rincian Pekerjaan & Pengeluaran
+                                </button>
+                            </h2>
+                            <div id="collapse-{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ forloop.counter }}">
+                                <div class="accordion-body p-0 mt-3">
+                                    
+                                    <!-- TABEL PENDAPATAN -->
+                                    <h6 class="fw-bold text-success border-bottom pb-2">Riwayat Pekerjaan (Income)</h6>
+                                    <div class="table-responsive mb-4" style="max-height: 300px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover small">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th>Tanggal</th>
+                                                    <th>Invoice</th>
+                                                    <th>Kendaraan</th>
+                                                    <th>Deskripsi</th>
+                                                    <th class="text-end">Nominal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for job in data.job_details %}
+                                                <tr>
+                                                    <td>{{ job.date|date:"d/m/y H:i" }}</td>
+                                                    <td>{{ job.invoice }}</td>
+                                                    <td>{{ job.plate }}</td>
+                                                    <td>{{ job.description|truncatechars:50 }}</td>
+                                                    <td class="text-end">Rp {{ job.amount|intcomma }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr><td colspan="5" class="text-center text-muted">Tidak ada data transaksi.</td></tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- TABEL PENGELUARAN (JIKA ADA) -->
+                                    {% if data.expense_details %}
+                                    <h6 class="fw-bold text-danger border-bottom pb-2">Riwayat Pembelian (Expense)</h6>
+                                    <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover small">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th>Tanggal</th>
+                                                    <th>No PO</th>
+                                                    <th>Vendor</th>
+                                                    <th class="text-end">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for exp in data.expense_details %}
+                                                <tr>
+                                                    <td>{{ exp.order_date|date:"d/m/y" }}</td>
+                                                    <td>PO-{{ exp.id }}</td>
+                                                    <td>{{ exp.vendor.name }}</td>
+                                                    <td class="text-end text-danger">Rp {{ exp.total_amount|intcomma }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% endif %}
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END ACCORDION -->
+
+                </div>
             </div>
         </div>
+        {% endfor %}
     </div>
-</div>
-{% elif request.GET.mechanic %}
-<div class="alert alert-warning">
-    <i class="bi bi-exclamation-circle me-2"></i> Tidak ditemukan data transaksi (COMPLETED) untuk mekanik ini pada periode yang dipilih.
-</div>
-{% else %}
-<div class="alert alert-info">
-    <i class="bi bi-info-circle me-2"></i> Silakan pilih mekanik dan rentang tanggal di atas.
-</div>
-{% endif %}
 
-<div class="mt-4">
-    <a href="{% url 'reports:report_index' %}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Kembali
-    </a>
+    {% else %}
+    <div class="alert alert-info text-center py-5">
+        <i class="bi bi-info-circle display-4 d-block mb-3"></i>
+        <h5>Belum ada data ditampilkan.</h5>
+        <p>Silakan pilih mekanik dan rentang tanggal, lalu klik tombol <strong>Tampilkan</strong>.</p>
+    </div>
+    {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('.select2-multi').select2({
+            theme: 'bootstrap-5',
+            placeholder: "Pilih Mekanik...",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+</script>
 {% endblock %}

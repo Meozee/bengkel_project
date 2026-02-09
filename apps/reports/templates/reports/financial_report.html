@@ -1,93 +1,90 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block title %}Laporan Keuangan{% endblock %}
+{% block title %}Laporan Laba Rugi{% endblock %}
 
 {% block content %}
-<h1><i class="bi bi-cash-coin"></i> Laporan Keuangan</h1>
+<div class="container-fluid px-4 mt-4">
+    <h2 class="mb-4 text-success"><i class="bi bi-cash-coin me-2"></i>Laporan Laba Rugi</h2>
 
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <!-- Ubah method jadi GET (Standar Laporan) -->
-        <form method="get" action="{% url 'reports:financial_report' %}">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label for="start_date" class="form-label">Tanggal Mulai</label>
-                    <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+    <!-- FILTER -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="fw-bold small text-muted">Tanggal Mulai</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="fw-bold small text-muted">Tanggal Selesai</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-search"></i> Generate Laporan</button>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <label for="end_date" class="form-label">Tanggal Selesai</label>
-                    <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
-                </div>
-                <div class="col-md-4">
-                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Generate Laporan</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-{% if report_data %}
-<div class="card shadow-sm">
-    <div class="card-header bg-light">
-        <h5 class="mb-0">Periode: {{ report_data.start_date|date:"d M Y" }} - {{ report_data.end_date|date:"d M Y" }}</h5>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-borderless">
-                <tbody>
-                    <!-- PENDAPATAN -->
-                    <tr class="border-bottom">
-                        <td colspan="2" class="fw-bold text-uppercase text-success">Pendapatan (Revenue)</td>
-                    </tr>
-                    <tr>
-                        <td class="ps-4">Total Pendapatan Transaksi</td>
-                        <td class="text-end fw-bold text-success">Rp {{ report_data.total_income|intcomma }}</td>
-                    </tr>
-                    
-                    <!-- PENGELUARAN -->
-                    <tr class="border-bottom">
-                        <td colspan="2" class="fw-bold text-uppercase text-danger mt-4 pt-3">Beban & Pengeluaran</td>
-                    </tr>
-                    <tr>
-                        <td class="ps-4">(-) Pembelian Stok (HPP)</td>
-                        <td class="text-end text-danger">Rp {{ report_data.total_purchases|intcomma }}</td>
-                    </tr>
-                    <tr>
-                        <td class="ps-4">(-) Biaya Operasional (Gaji/Listrik/dll)</td>
-                        <td class="text-end text-danger">Rp {{ report_data.total_operational|intcomma }}</td>
-                    </tr>
-                    <tr class="bg-light">
-                        <td class="ps-4 fw-bold">Total Pengeluaran</td>
-                        <td class="text-end fw-bold text-danger">Rp {{ report_data.total_expenses|intcomma }}</td>
-                    </tr>
-
-                    <!-- LABA BERSIH -->
-                    <tr class="border-top border-bottom border-3">
-                        <td class="fw-bold fs-4 text-uppercase">Laba Bersih (Net Profit)</td>
-                        <td class="text-end fw-bold fs-4 {% if report_data.net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            Rp {{ report_data.net_profit|intcomma }}
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            </form>
         </div>
     </div>
-    <div class="card-footer text-end">
-        <a href="{% url 'reports:export_financial' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-success">
-            <i class="bi bi-file-earmark-excel"></i> Export Excel
-        </a>
-    </div>
-</div>
-{% else %}
-<div class="alert alert-info">
-    <i class="bi bi-info-circle me-2"></i> Pilih rentang tanggal dan klik "Generate Laporan" untuk melihat hasilnya.
-</div>
-{% endif %}
 
-<div class="mt-4">
-    <a href="{% url 'reports:report_index' %}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Kembali
-    </a>
+    {% if report_data %}
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow border-0">
+                <div class="card-header bg-white text-center py-4 border-bottom">
+                    <h4 class="fw-bold mb-1">LAPORAN LABA RUGI</h4>
+                    <p class="text-muted mb-0">Periode: {{ start_date|date:"d M Y" }} s/d {{ end_date|date:"d M Y" }}</p>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <tbody>
+                                <!-- PENDAPATAN -->
+                                <tr class="bg-light">
+                                    <th colspan="2" class="text-uppercase text-primary ps-4 py-3">1. Pendapatan (Revenue)</th>
+                                </tr>
+                                <tr>
+                                    <td class="ps-5">Pendapatan Transaksi (Service & Penjualan)</td>
+                                    <td class="text-end pe-4 fw-bold">Rp {{ report_data.total_income|intcomma }}</td>
+                                </tr>
+                                <tr><td colspan="2"></td></tr>
+
+                                <!-- BEBAN -->
+                                <tr class="bg-light">
+                                    <th colspan="2" class="text-uppercase text-danger ps-4 py-3">2. Beban & Pengeluaran</th>
+                                </tr>
+                                <tr>
+                                    <td class="ps-5 text-muted">(-) Pembelian Stok (HPP / Purchase Order)</td>
+                                    <td class="text-end pe-4 text-danger">Rp {{ report_data.total_purchases|intcomma }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-5 text-muted">(-) Biaya Operasional (Gaji, Listrik, Sewa)</td>
+                                    <td class="text-end pe-4 text-danger">Rp {{ report_data.total_operational|intcomma }}</td>
+                                </tr>
+                                <tr class="border-top">
+                                    <td class="ps-5 fw-bold fst-italic">Total Pengeluaran</td>
+                                    <td class="text-end pe-4 fw-bold text-danger">Rp {{ report_data.total_expenses|intcomma }}</td>
+                                </tr>
+                                <tr><td colspan="2"></td></tr>
+
+                                <!-- LABA BERSIH -->
+                                <tr class="bg-success text-white">
+                                    <th class="ps-4 py-3 fs-5">LABA BERSIH (NET PROFIT)</th>
+                                    <th class="text-end pe-4 py-3 fs-5">Rp {{ report_data.net_profit|intcomma }}</th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white text-end py-3">
+                    <a href="{% url 'reports:export_financial' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-outline-success fw-bold">
+                        <i class="bi bi-file-earmark-excel me-2"></i> Download Excel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

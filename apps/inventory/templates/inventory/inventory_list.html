@@ -5,28 +5,57 @@
 
 {% block content %}
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Daftar Inventaris</h1>
-
-    <div class="mb-3">
-        <a href="{% url 'inventory:inventory_add' %}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Tambah Item Baru
-        </a>
-        <a href="{% url 'inventory:category_list' %}" class="btn btn-secondary">
-            <i class="fas fa-tags"></i> Kelola Kategori
-        </a>
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+        <h1 class="mb-0"><i class="fas fa-boxes"></i> Daftar Inventaris</h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'inventory:inventory_add' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Tambah Item
+            </a>
+            <a href="{% url 'inventory:category_list' %}" class="btn btn-secondary">
+                <i class="fas fa-tags"></i> Kategori
+            </a>
+        </div>
     </div>
 
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header">
+    <!-- TABS STATUS AKTIF / ARSIP -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link {% if current_status_tab == 'active' %}active fw-bold{% endif %}" 
+               href="?status=active&q={{ current_query }}&category={{ current_category }}">
+                <i class="fas fa-box-open text-success"></i> Item Aktif
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if current_status_tab == 'archived' %}active fw-bold{% endif %}" 
+               href="?status=archived&q={{ current_query }}&category={{ current_category }}">
+                <i class="fas fa-archive text-secondary"></i> Arsip (Non-Aktif)
+            </a>
+        </li>
+    </ul>
+
+    <!-- FILTER CARD -->
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-header bg-light">
             <i class="fas fa-filter"></i> Filter & Pencarian
         </div>
         <div class="card-body">
             <form method="GET" action="{% url 'inventory:inventory_list' %}" class="row g-3">
+                <!-- Hidden input untuk menjaga tab tetap aktif saat search -->
+                <input type="hidden" name="status" value="{{ current_status_tab }}">
+
                 <div class="col-md-4">
-                    <input type="text" name="q" class="form-control" placeholder="Cari nama atau SKU..." value="{{ current_query }}">
+                    <label class="form-label small text-muted">Pencarian</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+                        <input type="text" name="q" class="form-control" placeholder="Nama barang atau SKU..." value="{{ current_query }}">
+                    </div>
                 </div>
+                
                 <div class="col-md-3">
-                    <select name="category" class="form-select">
+                    <label class="form-label small text-muted">Kategori</label>
+                    <!-- FIX: Tambah class select2-enable -->
+                    <select name="category" class="form-select select2-enable" data-placeholder="Pilih Kategori...">
                         <option value="">Semua Kategori</option>
                         {% for cat in categories %}
                         <option value="{{ cat.id }}" {% if current_category == cat.id %}selected{% endif %}>
@@ -35,102 +64,134 @@
                         {% endfor %}
                     </select>
                 </div>
+                
                 <div class="col-md-3">
+                    <label class="form-label small text-muted">Status Stok</label>
                     <select name="stock_status" class="form-select">
                         <option value="">Semua Stok</option>
                         <option value="low" {% if current_stock_status == 'low' %}selected{% endif %}>Stok Rendah</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-primary w-100">Cari</button>
+                
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1">
+                        Terapkan
+                    </button>
+                    <!-- FIX: Tombol Reset Filter -->
+                    <a href="{% url 'inventory:inventory_list' %}?status={{ current_status_tab }}" class="btn btn-outline-secondary" title="Reset Filter">
+                        <i class="fas fa-undo"></i>
+                    </a>
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-warehouse"></i> Daftar Item Aktif</span>
-            <span class="badge bg-info text-dark">
+    <!-- TABLE CARD -->
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+            <h5 class="mb-0 text-secondary">
+                {% if current_status_tab == 'active' %}
+                    <i class="fas fa-check-circle text-success"></i> Data Item Aktif
+                {% else %}
+                    <i class="fas fa-history text-secondary"></i> Data Arsip
+                {% endif %}
+            </h5>
+            <span class="badge bg-light text-dark border">
                 Total: {{ items.paginator.count }} Barang
             </span>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary">
                         <tr>
-                            <th>Nama Item</th>
-                            <th>SKU</th>
-                            <th>Kategori</th>
-                            {% if selected_category_obj and selected_category_obj.required_specs %}
-                                {% with specs=selected_category_obj.required_specs %}
-                                    <th class="table-info text-center" colspan="100%">Spesifikasi: {{ specs }}</th>
-                                {% endwith %}
-                            {% endif %}
-                            <th>Stok</th>
-                            <th>Harga Jual</th>
-                            <th style="width: 150px;">Aksi</th>
+                            <th class="ps-3">Nama Item</th>
+                            <th>Kategori / SKU</th>
+                            <th class="text-center">Stok</th>
+                            <th class="text-center">Terpakai</th>
+                            <th>Harga</th>
+                            <th>Update Terakhir</th>
+                            <th class="text-center" style="width: 100px;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in items %}
-                        <tr class="{% if item.is_low_stock %}table-danger{% endif %}">
-                            <td>
-                                <a href="{% url 'inventory:inventory_detail' item.pk %}" class="fw-bold text-decoration-none">
+                        <tr class="{% if item.is_low_stock and current_status_tab == 'active' %}table-warning{% endif %}">
+                            <td class="ps-3">
+                                <a href="{% url 'inventory:inventory_detail' item.pk %}" class="fw-bold text-decoration-none text-dark">
                                     {{ item.name }}
                                 </a>
-                                {% if item.is_low_stock %}
-                                    <span class="badge bg-danger ms-2" style="font-size: 0.7em;">Low Stock</span>
+                                {% if item.is_low_stock and current_status_tab == 'active' %}
+                                    <div class="mt-1">
+                                        <span class="badge bg-danger blink-soft"><i class="fas fa-exclamation-circle"></i> Stok Menipis</span>
+                                    </div>
                                 {% endif %}
                             </td>
-                            <td>{{ item.sku|default:"-" }}</td>
-                            <td>{{ item.category.name|default:"-" }}</td>
+                            <td>
+                                <div class="badge bg-light text-dark border mb-1">{{ item.category.name|default:"-" }}</div>
+                                <div class="small text-muted font-monospace">{{ item.sku|default:"-" }}</div>
+                            </td>
                             
-                            {% if selected_category_obj and selected_category_obj.required_specs %}
-                                <td colspan="100%">
-                                    {% for key, val in item.extra_specs.items %}
-                                        <span class="badge bg-light text-dark border me-1">
-                                            {{ key }}: {{ val }}
-                                        </span>
-                                    {% empty %}
-                                        <span class="text-muted small">-</span>
-                                    {% endfor %}
-                                </td>
-                            {% endif %}
-                            
-                            <td class="text-center">{{ item.quantity }}</td>
-                            <td class="text-end">Rp {{ item.sell_price|intcomma }}</td>
                             <td class="text-center">
-                                <a href="{% url 'inventory:inventory_update' item.pk %}" class="btn btn-sm btn-outline-primary w-100">
-                                    <i class="fas fa-edit"></i> Edit
+                                <span class="badge {% if item.quantity > 0 %}bg-success{% else %}bg-danger{% endif %} rounded-pill px-3">
+                                    {{ item.quantity }}
+                                </span>
+                            </td>
+
+                            <td class="text-center">
+                                {% if item.usage_count > 0 %}
+                                    <span class="badge bg-secondary" title="Digunakan di {{ item.usage_count }} transaksi">
+                                        {{ item.usage_count }}x
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted small">-</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <div class="fw-bold text-success">Rp {{ item.sell_price|intcomma }}</div>
+                                {% if item.install_price > 0 %}
+                                    <div class="small text-muted">+ Jasa Std: Rp {{ item.install_price|intcomma }}</div>
+                                {% endif %}
+                            </td>
+
+                            <td class="small text-muted">
+                                {{ item.updated_at|date:"d M Y" }}
+                            </td>
+
+                            <td class="text-center">
+                                <!-- FIX: Tambahkan return_to agar setelah edit kembali ke halaman filter ini -->
+                                <a href="{% url 'inventory:inventory_update' item.pk %}?return_to={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
                                 </a>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center py-4 text-muted">
-                                <i class="fas fa-box-open fa-3x mb-3 text-secondary"></i><br>
-                                Tidak ada item ditemukan.
+                            <td colspan="7" class="text-center py-5 text-muted bg-light">
+                                <div class="py-4">
+                                    <i class="fas fa-box-open fa-3x mb-3 text-secondary opacity-50"></i>
+                                    <p class="mb-0">Tidak ada item ditemukan.</p>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-
-            {% if items.has_other_pages %}
-            <nav aria-label="Page navigation" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    
+        </div>
+        
+        <!-- PAGINATION -->
+        {% if items.has_other_pages %}
+        <div class="card-footer bg-white py-3">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-0">
                     {% if items.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ items.previous_page_number }}&q={{ current_query }}&category={{ current_category }}&stock_status={{ current_stock_status }}">
-                                &laquo; Sebelumnya
+                            <a class="page-link" href="?page={{ items.previous_page_number }}&status={{ current_status_tab }}&q={{ current_query }}&category={{ current_category }}">
+                                &laquo;
                             </a>
                         </li>
-                    {% else %}
-                        <li class="page-item disabled"><span class="page-link">&laquo; Sebelumnya</span></li>
                     {% endif %}
 
                     {% for i in items.paginator.page_range %}
@@ -138,28 +199,50 @@
                             <li class="page-item active"><span class="page-link">{{ i }}</span></li>
                         {% elif i > items.number|add:'-3' and i < items.number|add:'3' %}
                             <li class="page-item">
-                                <a class="page-link" href="?page={{ i }}&q={{ current_query }}&category={{ current_category }}&stock_status={{ current_stock_status }}">{{ i }}</a>
+                                <a class="page-link" href="?page={{ i }}&status={{ current_status_tab }}&q={{ current_query }}&category={{ current_category }}">{{ i }}</a>
                             </li>
                         {% endif %}
                     {% endfor %}
 
                     {% if items.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ items.next_page_number }}&q={{ current_query }}&category={{ current_category }}&stock_status={{ current_stock_status }}">
-                                Selanjutnya &raquo;
+                            <a class="page-link" href="?page={{ items.next_page_number }}&status={{ current_status_tab }}&q={{ current_query }}&category={{ current_category }}">
+                                &raquo;
                             </a>
                         </li>
-                    {% else %}
-                        <li class="page-item disabled"><span class="page-link">Selanjutnya &raquo;</span></li>
                     {% endif %}
                 </ul>
             </nav>
-            <div class="text-center text-muted small">
-                Halaman {{ items.number }} dari {{ items.paginator.num_pages }}
-            </div>
-            {% endif %}
-
         </div>
+        {% endif %}
     </div>
 </div>
+
+<style>
+.blink-soft {
+  animation: blinker 2s linear infinite;
+}
+@keyframes blinker {
+  50% { opacity: 0.6; }
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- FIX: Tambahkan Library Select2 agar dropdown bisa di-search -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('.select2-enable').select2({
+            theme: "bootstrap-5",
+            width: '100%',
+            placeholder: $(this).data('placeholder'),
+            allowClear: true
+        });
+    });
+</script>
 {% endblock %}

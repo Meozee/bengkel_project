@@ -5,58 +5,64 @@
 {% block title %}Daftar Transaksi{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-receipt me-2"></i>Daftar Transaksi</h2>
+<div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+    <h2 class="mb-0"><i class="bi bi-receipt me-2"></i>Daftar Transaksi</h2>
     <a href="{% url 'transactions:transaction_create' %}" class="btn btn-primary shadow-sm">
         <i class="bi bi-plus-circle me-2"></i>Transaksi Baru
     </a>
 </div>
 
+<!-- FILTER CARD -->
 <div class="card mb-4 shadow-sm border-0">
     <div class="card-header bg-white border-bottom py-3">
-        <h5 class="mb-0">
-            <i class="bi bi-funnel me-2 text-primary"></i>Filter Pencarian
-            <button class="btn btn-sm btn-link float-end" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
-                <i class="bi bi-chevron-down"></i>
-            </button>
+        <h5 class="mb-0 d-flex justify-content-between cursor-pointer" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+            <span><i class="bi bi-funnel me-2 text-primary"></i>Filter Pencarian</span>
+            <i class="bi bi-chevron-down"></i>
         </h5>
     </div>
-    <div class="collapse show" id="filterCollapse">
-        <div class="card-body">
+    <div class="collapse {% if filter_customer or filter_mechanic or filter_item or filter_service or filter_start %}show{% endif %}" id="filterCollapse">
+        <div class="card-body bg-light bg-opacity-25">
             <form method="get" action="{% url 'transactions:transaction_list' %}">
-                <div class="row g-3 align-items-end">
+                <div class="row g-3">
+                    <!-- Baris 1: Identitas -->
                     <div class="col-md-3">
-                        <label class="form-label small fw-bold text-muted">Pelanggan/Mekanik</label>
+                        <label class="form-label small fw-bold text-muted">Pelanggan / Mekanik</label>
                         <input type="text" name="customer_name" class="form-control mb-2" value="{{ filter_customer }}" placeholder="Nama Pelanggan...">
                         <input type="text" name="mechanic_name" class="form-control" value="{{ filter_mechanic }}" placeholder="Nama Mekanik...">
                     </div>
                     
+                    <!-- Baris 2: Kendaraan & Status -->
                     <div class="col-md-3">
-                        <label class="form-label small fw-bold text-muted">Kendaraan & Status</label>
+                        <label class="form-label small fw-bold text-muted">Info Kendaraan</label>
                         <input type="text" name="license_plate" class="form-control mb-2" value="{{ filter_plate }}" placeholder="Plat Nomor...">
                         <select name="status" class="form-select">
-                            <option value="">Semua Status</option>
-                            <option value="PENDING" {% if filter_status == 'PENDING' %}selected{% endif %}>Pending</option>
-                            <option value="COMPLETED" {% if filter_status == 'COMPLETED' %}selected{% endif %}>Completed</option>
-                            <option value="CANCELLED" {% if filter_status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                            <option value="">-- Semua Status --</option>
+                            <option value="PENDING" {% if filter_status == 'PENDING' %}selected{% endif %}>Pending (Proses)</option>
+                            <option value="COMPLETED" {% if filter_status == 'COMPLETED' %}selected{% endif %}>Completed (Selesai)</option>
+                            <option value="CANCELLED" {% if filter_status == 'CANCELLED' %}selected{% endif %}>Cancelled (Batal)</option>
                         </select>
                     </div>
 
+                    <!-- Baris 3: Item & Service (NEW) -->
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Detail Barang / Jasa</label>
+                        <input type="text" name="item_name" class="form-control mb-2" value="{{ filter_item }}" placeholder="Cari Barang (mis: Oli)...">
+                        <input type="text" name="service_name" class="form-control" value="{{ filter_service }}" placeholder="Cari Jasa (mis: Service)...">
+                    </div>
+
+                    <!-- Baris 4: Tanggal & Tombol -->
                     <div class="col-md-3">
                         <label class="form-label small fw-bold text-muted">Rentang Tanggal</label>
                         <div class="input-group mb-2">
-                            <span class="input-group-text small bg-light">Mulai</span>
                             <input type="date" name="start_date" class="form-control" value="{{ filter_start }}">
-                        </div>
-                        <div class="input-group">
-                            <span class="input-group-text small bg-light">Sampai</span>
+                            <span class="input-group-text bg-white">-</span>
                             <input type="date" name="end_date" class="form-control" value="{{ filter_end }}">
                         </div>
-                    </div>
-                    
-                    <div class="col-md-3 d-grid gap-2">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-search me-2"></i>Cari Data</button>
-                        <a href="{% url 'transactions:transaction_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-counterclockwise"></i> Reset</a>
+                        
+                        <div class="d-grid gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-search me-2"></i>Cari</button>
+                            <a href="{% url 'transactions:transaction_list' %}" class="btn btn-outline-secondary btn-sm">Reset Filter</a>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -68,14 +74,12 @@
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+                <thead class="table-light text-secondary">
                     <tr>
-                        <th class="ps-3">Invoice</th>
-                        <th>Waktu</th>
-                        <th>Pelanggan</th>
-                        <th style="width: 25%">Detail Pengerjaan</th>
-                        <th>Mekanik</th>
-                        <th class="text-end">Total</th>
+                        <th class="ps-4">Invoice / Waktu</th>
+                        <th>Kendaraan</th> <!-- Ganti Pelanggan jadi Kendaraan -->
+                        <th style="width: 35%">Ringkasan Transaksi</th>
+                        <th>Total</th>
                         <th>Status</th>
                         <th class="text-center">Aksi</th>
                     </tr>
@@ -83,111 +87,110 @@
                 <tbody>
                     {% for transaction in transactions %}
                     <tr>
-                        <td class="ps-3">
-                            <a href="{% url 'transactions:transaction_detail' transaction.pk %}" class="text-decoration-none fw-bold">
+                        <td class="ps-4">
+                            <a href="{% url 'transactions:transaction_detail' transaction.pk %}" class="text-decoration-none fw-bold text-primary d-block">
                                 {{ transaction.invoice_number }}
                             </a>
+                            <small class="text-muted">{{ transaction.created_at|date:"d M Y, H:i" }}</small>
                         </td>
-                        <td>{{ transaction.created_at|date:"d M Y" }}<br><small class="text-muted">{{ transaction.created_at|date:"H:i" }}</small></td>
-                        <td>{{ transaction.customer.name|default:"Umum" }}</td>
                         <td>
                             {% if transaction.vehicle %}
-                                <div class="fw-bold text-dark">{{ transaction.vehicle.license_plate }}</div>
-                                <small class="text-muted">{{ transaction.vehicle.vehicle_type }}</small>
+                                <span class="badge bg-dark border font-monospace fs-6">{{ transaction.vehicle.license_plate }}</span>
+                                <div class="small text-muted mt-1">{{ transaction.vehicle.vehicle_type }}</div>
+                            {% else %}
+                                <span class="text-muted small fst-italic">Tanpa Kendaraan</span>
                             {% endif %}
-                            <div class="mt-1 small">
-                                <!-- BARANG (Items) -->
+                        </td>
+                        <td>
+                            <!-- Preview Items -->
+                            <div class="small lh-sm">
                                 {% for item in transaction.items.all|slice:":2" %}
-                                    <span class="badge bg-light text-dark border mb-1" title="{{ item.item.name }}">
-                                        <i class="bi bi-box small"></i> {{ item.item.name|truncatechars:15 }}
-                                    </span>
-                                {% endfor %}
-
-                                <!-- JASA (Services) -->
-                                {% for svc in transaction.services.all|slice:":2" %}
-                                    <span class="badge bg-light text-primary border mb-1" title="{{ svc.service.name }}">
-                                        <i class="bi bi-wrench small"></i> {{ svc.service.name|truncatechars:15 }}
-                                    </span>
-                                {% endfor %}
-
-                                <!-- BIAYA LAIN/NON-STOK (Miscs) - UPDATE DISINI -->
-                                {% for misc in transaction.miscs.all|slice:":2" %}
-                                    <span class="badge bg-light text-warning border mb-1" title="{{ misc.description }}">
-                                        <i class="bi bi-list-task small"></i> {{ misc.description|truncatechars:15 }}
-                                    </span>
+                                    <div class="mb-1">
+                                        <i class="bi bi-box-seam text-secondary me-1"></i>
+                                        {{ item.quantity }}x {{ item.item.name|truncatechars:25 }}
+                                    </div>
                                 {% endfor %}
                                 
-                                <!-- Indikator jika ada item lebih banyak -->
-                                {% if transaction.items.count > 2 or transaction.services.count > 2 or transaction.miscs.count > 2 %}
-                                    <span class="badge bg-light text-muted border mb-1">...</span>
+                                {% for svc in transaction.services.all|slice:":2" %}
+                                    <div class="mb-1 text-primary">
+                                        <i class="bi bi-wrench text-primary me-1"></i>
+                                        {{ svc.service.name|truncatechars:25 }}
+                                    </div>
+                                {% endfor %}
+
+                                <!-- Biaya Lain & Sisa -->
+                                {% if transaction.miscs.exists %}
+                                    <div class="mb-1 text-warning text-dark">
+                                        <i class="bi bi-list-stars me-1"></i>
+                                        Biaya Lain-lain ({{ transaction.miscs.count }} item)
+                                    </div>
+                                {% endif %}
+
+                                {% if transaction.items.count|add:transaction.services.count > 4 %}
+                                    <span class="text-muted fst-italic ms-1" style="font-size: 0.75rem;">...dan lainnya</span>
                                 {% endif %}
                             </div>
                         </td>
-                        <td>{{ transaction.mechanic.name|default:"-" }}</td>
-                        <td class="text-end fw-bold text-success">Rp {{ transaction.total_amount|intcomma }}</td>
+                        <td class="fw-bold text-success">Rp {{ transaction.total_amount|intcomma }}</td>
                         
                         <td>
                             {% if transaction.status == 'PENDING' %}
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-sm btn-warning dropdown-toggle" data-bs-toggle="dropdown">
-                                        {{ transaction.get_status_display }}
-                                    </button>
-                                    <ul class="dropdown-menu shadow">
-                                        <li><a class="dropdown-item" href="{% url 'transactions:update_status' transaction.pk 'COMPLETED' %}" 
-                                               onclick="return confirm('Selesaikan transaksi? Stok akan berkurang.')">
-                                            <i class="bi bi-check-circle text-success me-2"></i>Selesai
-                                        </a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="{% url 'transactions:update_status' transaction.pk 'CANCELLED' %}" 
-                                               onclick="return confirm('Yakin batalkan?')">
-                                            <i class="bi bi-x-circle me-2"></i>Batal
-                                        </a></li>
-                                    </ul>
-                                </div>
+                                <span class="badge bg-warning text-dark">Proses</span>
                             {% elif transaction.status == 'COMPLETED' %}
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-sm btn-success dropdown-toggle" data-bs-toggle="dropdown">
-                                        {{ transaction.get_status_display }}
-                                    </button>
-                                    <ul class="dropdown-menu shadow">
-                                        <li><a class="dropdown-item text-danger" href="{% url 'transactions:update_status' transaction.pk 'CANCELLED' %}" 
-                                               onclick="return confirm('Yakin batalkan transaksi yang sudah selesai?')">
-                                            <i class="bi bi-x-circle me-2"></i>Batalkan
-                                        </a></li>
-                                    </ul>
-                                </div>
+                                <span class="badge bg-success">Selesai</span>
                             {% else %}
-                                <span class="badge bg-danger">{{ transaction.get_status_display }}</span>
+                                <span class="badge bg-danger">Batal</span>
                             {% endif %}
                         </td>
 
                         <td class="text-center">
-                            <div class="btn-group btn-group-sm">
-                                <a href="{% url 'transactions:transaction_detail' transaction.pk %}" class="btn btn-outline-info" title="Detail"><i class="bi bi-eye"></i></a>
-                                
-                                {% if transaction.status == 'COMPLETED' %}
-                                    <a href="{% url 'transactions:transaction_print_direct' transaction.pk %}" class="btn btn-dark" title="Print USB">
-                                        <i class="bi bi-printer-fill"></i>
-                                    </a>
-                                {% endif %}
+                            <div class="dropdown">
+                                <button class="btn btn-light btn-sm border" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow action-menu">
+                                    <li>
+                                        <a class="dropdown-item py-2" href="{% url 'transactions:transaction_detail' transaction.pk %}">
+                                            <i class="bi bi-eye me-2 text-info"></i>Detail
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item py-2" href="#" onclick="window.open('{% url 'transactions:transaction_print' transaction.pk %}', 'StrukPopup', 'width=350,height=600'); return false;">
+                                            <i class="bi bi-printer me-2 text-dark"></i>Print Struk
+                                        </a>
+                                    </li>
+                                    
+                                    {% if transaction.status == 'PENDING' %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item py-2" href="{% url 'transactions:transaction_edit' transaction.pk %}">
+                                                <i class="bi bi-pencil me-2 text-warning"></i>Edit
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item py-2 fw-bold text-success bg-success bg-opacity-10" href="{% url 'transactions:update_status' transaction.pk 'COMPLETED' %}" onclick="return confirm('Selesaikan transaksi? Stok akan dikurangi.')">
+                                                <i class="bi bi-check-circle me-2"></i>Selesaikan
+                                            </a>
+                                        </li>
+                                    {% endif %}
 
-                                {% if transaction.can_be_edited %}
-                                    <a href="{% url 'transactions:transaction_edit' transaction.pk %}" class="btn btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
-                                {% endif %}
-
-                                {% if transaction.can_be_deleted %}
-                                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ transaction.pk }}" title="Hapus">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                {% endif %}
+                                    {% if transaction.status != 'CANCELLED' %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item py-2 text-danger" href="{% url 'transactions:update_status' transaction.pk 'CANCELLED' %}" onclick="return confirm('Batalkan transaksi ini?')">
+                                                <i class="bi bi-x-circle me-2"></i>Batalkan
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center py-5 text-muted">
-                            <i class="bi bi-inbox display-4"></i>
-                            <p class="mt-3">Data transaksi tidak ditemukan.</p>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox display-4 d-block mb-3 opacity-50"></i>
+                            <p class="mb-0">Tidak ada transaksi ditemukan.</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -197,64 +200,44 @@
     </div>
 </div>
 
+<!-- Pagination -->
 {% if transactions.has_other_pages %}
 <div class="d-flex justify-content-center mt-4 mb-5">
-    <nav aria-label="Navigasi Halaman">
+    <nav>
         <ul class="pagination shadow-sm">
             {% if transactions.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ transactions.previous_page_number }}{% if filter_customer %}&customer_name={{ filter_customer }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}">
+                    <a class="page-link" href="?page={{ transactions.previous_page_number }}&customer_name={{ filter_customer }}&status={{ filter_status }}&item_name={{ filter_item }}">
                         <i class="bi bi-chevron-left"></i>
                     </a>
                 </li>
-            {% else %}
-                <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
             {% endif %}
 
             <li class="page-item active">
-                <span class="page-link">Halaman {{ transactions.number }} dari {{ transactions.paginator.num_pages }}</span>
+                <span class="page-link">Hal {{ transactions.number }} / {{ transactions.paginator.num_pages }}</span>
             </li>
 
             {% if transactions.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ transactions.next_page_number }}{% if filter_customer %}&customer_name={{ filter_customer }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}">
+                    <a class="page-link" href="?page={{ transactions.next_page_number }}&customer_name={{ filter_customer }}&status={{ filter_status }}&item_name={{ filter_item }}">
                         <i class="bi bi-chevron-right"></i>
                     </a>
                 </li>
-            {% else %}
-                <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
             {% endif %}
         </ul>
     </nav>
 </div>
 {% endif %}
 
-{% for transaction in transactions %}
-    {% if transaction.can_be_deleted %}
-    <div class="modal fade" id="deleteModal{{ transaction.pk }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Hapus Transaksi</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Yakin ingin menghapus transaksi <strong>{{ transaction.invoice_number }}</strong>?</p>
-                    <div class="alert alert-warning">
-                        <i class="bi bi-info-circle me-2"></i> Data yang dihapus tidak bisa dikembalikan!
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <form method="post" action="{% url 'transactions:transaction_delete' transaction.pk %}" style="display:inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">Hapus Permanent</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-{% endfor %}
-
+<style>
+    /* Custom Action Hover Effect */
+    .action-menu .dropdown-item:hover {
+        background-color: #e9ecef; /* Lebih gelap dari default bootstrap */
+        font-weight: 500;
+    }
+    .action-menu .dropdown-item.text-danger:hover {
+        background-color: #f8d7da;
+        color: #842029 !important;
+    }
+</style>
 {% endblock %}

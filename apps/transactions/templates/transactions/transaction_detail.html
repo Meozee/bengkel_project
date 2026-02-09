@@ -12,15 +12,14 @@
                 <i class="bi bi-arrow-left me-1"></i> Kembali
             </a>
             
-            {% if transaction.status == 'COMPLETED' %}
-                <a href="#" 
-                   onclick="window.open('{% url 'transactions:transaction_print' transaction.pk %}', 'StrukPopup', 'width=300,height=600,scrollbars=yes,status=no,location=no'); return false;" 
-                   class="btn btn-dark shadow-sm">
-                    <i class="bi bi-printer-fill me-1"></i> Cetak Struk
-                </a>
-            {% endif %}
+            <!-- TOMBOL PRINT SELALU MUNCUL -->
+            <a href="#" 
+               onclick="window.open('{% url 'transactions:transaction_print' transaction.pk %}', 'StrukPopup', 'width=350,height=600,scrollbars=yes,status=no,location=no'); return false;" 
+               class="btn btn-dark shadow-sm">
+                <i class="bi bi-printer-fill me-1"></i> Cetak Struk
+            </a>
             
-            {% if transaction.status != 'CANCELLED' %}
+            {% if transaction.status == 'PENDING' %}
             <a href="{% url 'transactions:transaction_edit' transaction.pk %}" class="btn btn-warning shadow-sm">
                 <i class="bi bi-pencil-square me-1"></i> Edit
             </a>
@@ -28,10 +27,11 @@
         </div>
     </div>
 
+    <!-- Status Banner -->
     <div class="card mb-4 shadow-sm border-0 border-start border-5 {% if transaction.status == 'COMPLETED' %}border-success{% elif transaction.status == 'PENDING' %}border-warning{% else %}border-danger{% endif %}">
         <div class="card-body d-flex justify-content-between align-items-center">
             <div>
-                <strong>Status Saat Ini:</strong> 
+                <strong>Status Transaksi:</strong> 
                 {% if transaction.status == 'COMPLETED' %}
                     <span class="badge bg-success fs-6">Selesai (Completed)</span>
                 {% elif transaction.status == 'PENDING' %}
@@ -41,53 +41,45 @@
                 {% endif %}
             </div>
             <div class="text-end">
-                <div><small class="text-muted">Masuk:</small> <strong>{{ transaction.created_at|date:"d M Y, H:i" }}</strong></div>
+                <div class="small text-muted">Tanggal Masuk: <strong>{{ transaction.created_at|date:"d M Y, H:i" }}</strong></div>
                 {% if transaction.completed_at %}
-                <div><small class="text-muted">Selesai:</small> <strong>{{ transaction.completed_at|date:"d M Y, H:i" }}</strong></div>
-                {% endif %}
-                
-                {% if transaction.duration_minutes > 0 %}
-                    <span class="badge bg-info text-dark mt-1"><i class="bi bi-clock-history me-1"></i>{{ transaction.duration_minutes }} Menit Pengerjaan</span>
+                    <div class="small text-muted">Selesai: <strong>{{ transaction.completed_at|date:"d M Y, H:i" }}</strong></div>
                 {% endif %}
             </div>
         </div>
     </div>
 
     <div class="row">
-        <!-- KOLOM KIRI: INFO PELANGGAN -->
+        <!-- INFO PELANGGAN -->
         <div class="col-md-5 mb-4">
             <div class="card h-100 shadow-sm border-0">
                 <div class="card-header bg-primary text-white fw-bold">
-                    <i class="bi bi-person-lines-fill me-2"></i>Info Pelanggan & Unit
+                    <i class="bi bi-person-badge me-2"></i>Pelanggan & Kendaraan
                 </div>
                 <div class="card-body">
                     <table class="table table-borderless mb-0">
                         <tr>
-                            <td class="text-muted" width="35%">Pelanggan</td>
+                            <td class="text-muted" width="35%">Nama</td>
                             <td class="fw-bold fs-5">{{ transaction.customer.name|default:"Umum" }}</td>
                         </tr>
                         <tr>
-                            <td class="text-muted">No. Telepon</td>
+                            <td class="text-muted">Telepon</td>
                             <td>{{ transaction.customer.phone_number|default:"-" }}</td>
                         </tr>
                         <tr><td colspan="2"><hr class="my-1"></td></tr>
                         <tr>
-                            <td class="text-muted">Kendaraan</td>
-                            <td class="fw-bold">{{ transaction.vehicle.license_plate|default:"-" }}</td>
+                            <td class="text-muted">Plat Nomor</td>
+                            <td class="fw-bold font-monospace">{{ transaction.vehicle.license_plate|default:"-" }}</td>
                         </tr>
                         <tr>
-                            <td class="text-muted">Tipe/Merk</td>
+                            <td class="text-muted">Tipe</td>
                             <td>{{ transaction.vehicle.vehicle_type|default:"-" }}</td>
                         </tr>
                         <tr><td colspan="2"><hr class="my-1"></td></tr>
                         <tr>
                             <td class="text-muted">Mekanik</td>
                             <td>
-                                {% if transaction.mechanic %}
-                                    <span class="badge bg-secondary">{{ transaction.mechanic.name }}</span>
-                                {% else %}
-                                    -
-                                {% endif %}
+                                <span class="badge bg-secondary">{{ transaction.mechanic.name|default:"-" }}</span>
                             </td>
                         </tr>
                     </table>
@@ -95,7 +87,7 @@
             </div>
         </div>
 
-        <!-- KOLOM KANAN: RINCIAN BIAYA -->
+        <!-- RINCIAN ITEM -->
         <div class="col-md-7 mb-4">
             <div class="card h-100 shadow-sm border-0">
                 <div class="card-header bg-dark text-white fw-bold">
@@ -106,34 +98,28 @@
                         <table class="table table-hover mb-0 align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th class="ps-3">Item / Jasa / Biaya</th>
+                                    <th class="ps-3">Deskripsi Item / Jasa</th>
                                     <th class="text-end pe-3">Subtotal</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- 1. BARANG (ITEMS) -->
+                                <!-- 1. BARANG -->
                                 {% if transaction.items.exists %}
-                                    <tr class="bg-light"><td colspan="2" class="fw-bold small text-muted ps-3">BARANG / SPAREPART</td></tr>
+                                    <tr class="bg-light"><td colspan="2" class="fw-bold small text-muted ps-3 py-1">SPAREPART / BARANG</td></tr>
                                     {% for item in transaction.items.all %}
                                     <tr>
                                         <td class="ps-3">
                                             <div class="fw-bold">{{ item.item.name }}</div>
-                                            <small class="text-muted">{{ item.quantity }} x Rp {{ item.unit_price|floatformat:0|intcomma }}</small>
-                                            
-                                            <!-- Info FIFO Source -->
-                                            <div class="mt-1" style="font-size: 0.75rem;">
-                                                <i class="bi bi-box-seam me-1"></i>Sumber Stok:
-                                                {% for src in item.sources.all %}
-                                                    <span class="badge bg-light text-secondary border">
-                                                        PO-{{ src.purchase_order_item.purchase_order_id }} ({{ src.quantity_taken }})
+                                            <small class="text-muted">
+                                                {{ item.quantity }} x Rp {{ item.unit_price|floatformat:0|intcomma }}
+                                                {% if item.include_install %}
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success ms-1" style="font-size: 0.65rem;">
+                                                        + {{ item.item.install_service_name|default:"Jasa Pasang" }}
                                                     </span>
-                                                {% empty %}
-                                                    <span class="text-warning fst-italic">Non-FIFO / Stok Awal</span>
-                                                {% endfor %}
-                                            </div>
-
+                                                {% endif %}
+                                            </small>
                                             {% if item.discount_percentage > 0 %}
-                                                <small class="text-danger d-block">Disc: {{ item.discount_percentage|floatformat:0 }}%</small>
+                                                <span class="badge bg-danger ms-2">Disc {{ item.discount_percentage|floatformat:0 }}%</span>
                                             {% endif %}
                                         </td>
                                         <td class="text-end pe-3 fw-bold">Rp {{ item.subtotal|floatformat:0|intcomma }}</td>
@@ -141,30 +127,27 @@
                                     {% endfor %}
                                 {% endif %}
 
-                                <!-- 2. JASA (SERVICES) -->
+                                <!-- 2. JASA -->
                                 {% if transaction.services.exists %}
-                                    <tr class="bg-light"><td colspan="2" class="fw-bold small text-muted ps-3">JASA SERVICE</td></tr>
+                                    <tr class="bg-light"><td colspan="2" class="fw-bold small text-muted ps-3 py-1">JASA SERVICE</td></tr>
                                     {% for svc in transaction.services.all %}
                                     <tr>
                                         <td class="ps-3">
                                             <div class="fw-bold text-primary">{{ svc.service.name }}</div>
                                             <small class="text-muted">{{ svc.quantity }} x Rp {{ svc.unit_price|floatformat:0|intcomma }}</small>
-                                            {% if svc.discount_percentage > 0 %}
-                                                <small class="text-danger d-block">Disc: {{ svc.discount_percentage|floatformat:0 }}%</small>
-                                            {% endif %}
                                         </td>
                                         <td class="text-end pe-3 fw-bold">Rp {{ svc.subtotal|floatformat:0|intcomma }}</td>
                                     </tr>
                                     {% endfor %}
                                 {% endif %}
 
-                                <!-- 3. BIAYA LAIN-LAIN DETAIL (MISCS) -->
+                                <!-- 3. LAIN-LAIN -->
                                 {% if transaction.miscs.exists %}
-                                    <tr class="bg-light"><td colspan="2" class="fw-bold small text-muted ps-3">BIAYA LAIN-LAIN (NON-STOK)</td></tr>
+                                    <tr class="bg-light"><td colspan="2" class="fw-bold small text-muted ps-3 py-1">BIAYA LAIN (NON-STOK)</td></tr>
                                     {% for misc in transaction.miscs.all %}
                                     <tr>
                                         <td class="ps-3">
-                                            <div class="fw-bold text-warning text-dark">{{ misc.description }}</div>
+                                            <div class="text-dark">{{ misc.description }}</div>
                                             <small class="text-muted">{{ misc.quantity }} x Rp {{ misc.unit_price|floatformat:0|intcomma }}</small>
                                         </td>
                                         <td class="text-end pe-3 fw-bold">Rp {{ misc.subtotal|floatformat:0|intcomma }}</td>
@@ -172,14 +155,12 @@
                                     {% endfor %}
                                 {% endif %}
                                 
-                                <!-- SUMMARY TOTAL -->
+                                <!-- FOOTER TOTAL -->
                                 <tr class="border-top border-2">
-                                    <td class="text-end pt-3">Subtotal Keseluruhan</td>
-                                    <!-- Hitung manual subtotal kotor sebelum diskon/charges global jika perlu, atau abaikan -->
+                                    <td class="text-end pt-3">Subtotal</td>
                                     <td class="text-end pe-3 pt-3 text-muted">-</td> 
                                 </tr>
 
-                                <!-- Jika masih ada field other_charges GLOBAL -->
                                 {% if transaction.other_charges > 0 %}
                                 <tr>
                                     <td class="text-end">Biaya Tambahan Global</td>
@@ -187,13 +168,13 @@
                                 </tr>
                                 {% endif %}
 
-                                <!-- Global Discount -->
+                                {% if transaction.discount_amount > 0 %}
                                 <tr>
-                                    <td class="text-end">Potongan / Diskon Akhir</td>
+                                    <td class="text-end">Potongan / Diskon</td>
                                     <td class="text-end pe-3 text-danger fw-bold">- Rp {{ transaction.discount_amount|floatformat:0|intcomma }}</td>
                                 </tr>
+                                {% endif %}
 
-                                <!-- GRAND TOTAL -->
                                 <tr class="table-dark fs-5">
                                     <td class="text-end fw-bold py-3">TOTAL BAYAR</td>
                                     <td class="text-end fw-bold pe-3 py-3 text-warning">Rp {{ transaction.total_amount|floatformat:0|intcomma }}</td>
@@ -204,18 +185,16 @@
                 </div>
             </div>
         </div>
-        
-        <!-- CATATAN -->
-        {% if transaction.notes %}
+    </div>
+    
+    {% if transaction.notes %}
+    <div class="row">
         <div class="col-12">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-light fw-bold"><i class="bi bi-sticky me-2"></i>Catatan Tambahan</div>
-                <div class="card-body bg-warning bg-opacity-10 text-dark">
-                    {{ transaction.notes|linebreaks }}
-                </div>
+            <div class="alert alert-info">
+                <strong><i class="bi bi-sticky me-2"></i>Catatan:</strong> {{ transaction.notes }}
             </div>
         </div>
-        {% endif %}
     </div>
+    {% endif %}
 </div>
 {% endblock %}

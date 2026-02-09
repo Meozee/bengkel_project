@@ -1,72 +1,115 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block content %}
-<h2>Laporan Penjualan Barang</h2>
+{% block title %}Laporan Penjualan{% endblock %}
 
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <form method="get">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-5">
-                    <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+{% block content %}
+<div class="container-fluid px-4 mt-4">
+    <h2><i class="bi bi-graph-up-arrow text-primary me-2"></i>Laporan Penjualan Barang</h2>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="small fw-bold">Cari Barang</label>
+                        <input type="text" name="q" class="form-control" value="{{ filters.q|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small fw-bold">Kategori</label>
+                        <select name="category" class="form-select">
+                            <option value="">Semua</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if filters.category|add:"0" == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="small fw-bold">Dari</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="small fw-bold">Sampai</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">Filter</button>
+                    </div>
                 </div>
-                <div class="col-md-5">
-                    <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SUMMARY CARDS -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-6">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-uppercase opacity-75">Total Omzet (Revenue)</h6>
+                    <h3 class="fw-bold mb-0">Rp {{ total_omzet|intcomma }}</h3>
                 </div>
             </div>
-        </form>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-uppercase opacity-75">Estimasi Profit (Laba Kotor)</h6>
+                    <h3 class="fw-bold mb-0">Rp {{ total_profit|intcomma }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold">Rincian Per Barang</h6>
+            <a href="{% url 'reports:export_sales' %}?{{ request.GET.urlencode }}" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-file-excel"></i> Export Excel
+            </a>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Nama Barang</th>
+                            <th>Kategori</th>
+                            <th class="text-center">Qty Terjual</th>
+                            <th class="text-end">Omzet</th>
+                            <th class="text-end">HPP (Est)</th>
+                            <th class="text-end">Profit</th>
+                            <th class="text-end pe-3">Margin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in sales_data %}
+                        <tr>
+                            <td class="ps-3 fw-bold">{{ row.name }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ row.category }}</span></td>
+                            <td class="text-center">{{ row.qty }}</td>
+                            <td class="text-end">Rp {{ row.revenue|intcomma }}</td>
+                            <td class="text-end text-muted small">Rp {{ row.hpp|intcomma }}</td>
+                            <td class="text-end text-success fw-bold">Rp {{ row.profit|intcomma }}</td>
+                            <td class="text-end pe-3">
+                                {% if row.margin > 20 %}
+                                    <span class="text-success">{{ row.margin|floatformat:1 }}%</span>
+                                {% else %}
+                                    <span class="text-warning text-dark">{{ row.margin|floatformat:1 }}%</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="text-center py-5">Tidak ada data penjualan.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if sales_data.has_other_pages %}
+        <div class="card-footer bg-white">
+            {% include 'partials/pagination.html' with page_obj=sales_data %}
+        </div>
+        {% endif %}
     </div>
 </div>
-
-{% if report_data %}
-<div class="card shadow-sm">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            Total Omzet: Rp {{ report_data.total_omzet|floatformat:0|intcomma }} | 
-            Profit: Rp {{ report_data.total_profit|floatformat:0|intcomma }}
-        </h5>
-        
-        <a href="{% url 'reports:export_sales' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-success btn-sm">
-            Export Excel
-        </a>
-    </div>
-    
-    <div class="card-body p-0">
-        <table class="table table-striped mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Nama Barang</th>
-                    <th class="text-center">Qty</th>
-                    <th class="text-end">Omzet</th>
-                    <th class="text-end">Profit (Est)</th>
-                    <th class="text-end">Margin</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in report_data.sales_data %}
-                <tr>
-                    <td>{{ row.name }}</td>
-                    <td class="text-center">{{ row.qty }}</td>
-                    
-                    <td class="text-end">
-                        Rp {{ row.revenue|floatformat:0|intcomma }}
-                    </td>
-                    
-                    <td class="text-end text-success">
-                        Rp {{ row.profit|floatformat:0|intcomma }}
-                    </td>
-                    
-                    <td class="text-end">{{ row.margin|floatformat:1 }}%</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endif %}
-
 {% endblock %}

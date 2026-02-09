@@ -1,268 +1,331 @@
-# apps/reports/utils.py
 from decimal import Decimal
-from django.db.models import Sum, Count, Q, F, Max, Avg
+from django.db.models import Sum, Count, Q, F, Max, Avg, Min, Case, When, Value, CharField
+from django.db.models.functions import Coalesce, Concat
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Import Models
-from apps.transactions.models import Transaction, TransactionItem 
+from apps.transactions.models import Transaction, TransactionItem, TransactionService
 from apps.purchases.models import PurchaseOrder
-from apps.inventory.models import InventoryItem
-from apps.master_data.models import Mechanic, Customer
-from apps.expenses.models import Expense
+from apps.inventory.models import InventoryItem, VehicleServicePrice
+from apps.master_data.models import Mechanic, Customer, Vehicle
+from apps.expenses.models import Expense, ExpenseCategory
 
-
-from datetime import datetime, timedelta # <--- TAMBAHKAN timedelta
-
-
-
+# ==============================================================================
+# 1. LAPORAN KEUANGAN (PROFIT & LOSS)
+# ==============================================================================
 def generate_financial_report(start_date, end_date):
     """
-    Menghitung Laba Rugi yang Akurat.
-    Rumus: Laba Bersih = Pendapatan - (HPP Pembelian + Beban Operasional)
+    Menghitung Laba Rugi Sederhana.
     """
-    # 1. PENDAPATAN (Revenue)
-    # Hanya hitung transaksi yang sudah COMPLETED (uang masuk)
-    income_data = Transaction.objects.filter(
+    # A. PENDAPATAN (Revenue) - Transaksi COMPLETED
+    transactions = Transaction.objects.filter(
         status=Transaction.StatusChoices.COMPLETED,
         created_at__date__range=(start_date, end_date)
-    ).aggregate(total=Sum('total_amount'))
-    
+    )
+    income_data = transactions.aggregate(total=Sum('total_amount'))
     total_income = income_data['total'] or Decimal('0.00')
 
-    # 2. PENGELUARAN PEMBELIAN (COGS/HPP)
-    # Uang yang dipakai untuk beli stok barang (Restock)
+    # B. BEBAN POKOK (COGS) - Pembelian Sparepart (Restock)
+    # Filter PO yang statusnya COMPLETED
     purchases_data = PurchaseOrder.objects.filter(
         status=PurchaseOrder.StatusChoices.COMPLETED,
         order_date__date__range=(start_date, end_date)
     ).aggregate(total=Sum('total_amount'))
-    
     total_purchases = purchases_data['total'] or Decimal('0.00')
 
-    # 3. BEBAN OPERASIONAL (Opex)
-    # Listrik, Gaji, Air, Sewa, dll (Hanya yang status PAID)
+    # C. BEBAN OPERASIONAL (OPEX) - Gaji, Listrik, dll
+    # Filter Expense yang statusnya PAID
     expenses_data = Expense.objects.filter(
-        status=Expense.StatusChoices.PAID,
+        status='PAID',
         payment_date__range=(start_date, end_date)
     ).aggregate(total=Sum('amount'))
-    
-    total_operational_expenses = expenses_data['total'] or Decimal('0.00')
+    total_operational = expenses_data['total'] or Decimal('0.00')
 
-    # 4. TOTAL PENGELUARAN (Gabungan)
-    total_expenses_all = total_purchases + total_operational_expenses
+    # Total Pengeluaran
+    total_expenses = total_purchases + total_operational
 
-    # 5. LABA BERSIH (Net Profit)
-    net_profit = total_income - total_expenses_all
+    # Net Profit
+    net_profit = total_income - total_expenses
 
     return {
         'start_date': start_date,
         'end_date': end_date,
         'total_income': total_income,
-        'total_purchases': total_purchases, # Breakdown Pembelian
-        'total_operational': total_operational_expenses, # Breakdown Operasional
-        'total_expenses': total_expenses_all,
+        'total_purchases': total_purchases,
+        'total_operational': total_operational,
+        'total_expenses': total_expenses,
         'net_profit': net_profit,
     }
 
-def generate_low_stock_report():
+# ==============================================================================
+# 2. LAPORAN INVENTARIS (FILTER LENGKAP)
+# ==============================================================================
+def get_inventory_queryset(filters):
     """
-    Laporan Inventory: Item stok rendah & Nilai Aset.
+    Queryset Inventory dengan Filter Canggih.
+    filters: dict dari request.GET
     """
-    # Ambil item yang qty <= threshold
-    low_stock_items = InventoryItem.objects.filter(
-        quantity__lte=F('reorder_threshold')
-    ).annotate(
-        asset_value=F('quantity') * F('buy_price') # Hitung nilai aset tersisa
-    ).order_by('quantity')
+    items = InventoryItem.objects.select_related('category').prefetch_related('service_prices')
+
+    # 1. Filter Search (Nama / SKU)
+    q = filters.get('q')
+    if q:
+        items = items.filter(Q(name__icontains=q) | Q(sku__icontains=q))
+
+    # 2. Filter Kategori
+    category_id = filters.get('category')
+    if category_id:
+        items = items.filter(category_id=category_id)
+
+    # 3. Filter Status Stok
+    stock_status = filters.get('stock_status')
+    if stock_status == 'low':
+        items = items.filter(quantity__lte=F('reorder_threshold'))
+    elif stock_status == 'out':
+        items = items.filter(quantity=0)
+    elif stock_status == 'safe':
+        items = items.filter(quantity__gt=F('reorder_threshold'))
+
+    # 4. Filter Range Harga Jual
+    min_price = filters.get('min_price')
+    max_price = filters.get('max_price')
+    if min_price:
+        items = items.filter(sell_price__gte=min_price)
+    if max_price:
+        items = items.filter(sell_price__lte=max_price)
+
+    # 5. Filter Status Aktif/Arsip
+    status = filters.get('status')
+    if status == 'archived':
+        items = items.filter(is_active=False)
+    elif status == 'active': # Default usually active only or all
+        items = items.filter(is_active=True)
     
-    return low_stock_items
+    # 6. Filter Join Date (Created At)
+    join_date_start = filters.get('join_date_start')
+    join_date_end = filters.get('join_date_end')
+    if join_date_start and join_date_end:
+        items = items.filter(created_at__date__range=(join_date_start, join_date_end))
 
-def generate_mechanic_performance_report(mechanic_id, start_date, end_date):
+    # Annotate Aset Value & Service Price Range (Min - Max)
+    items = items.annotate(
+        asset_value=F('quantity') * F('buy_price'),
+        min_service_price=Min('service_prices__price'),
+        max_service_price=Max('service_prices__price')
+    ).order_by('-updated_at') # Default sort last update
+
+    return items
+
+# ==============================================================================
+# 3. LAPORAN KINERJA MEKANIK (DETAIL & MULTI)
+# ==============================================================================
+def get_mechanic_performance_data(mechanic_ids, start_date, end_date):
     """
-    Analisis Kinerja Mekanik (Status COMPLETED) + Rata-rata Kecepatan.
+    Mengambil data detail untuk satu atau banyak mekanik.
+    mechanic_ids: list of ID string ['1', '2'] atau None (All)
     """
-    try:
-        mechanic = Mechanic.objects.get(pk=mechanic_id)
-    except Mechanic.DoesNotExist:
-        return None
+    mechanics = Mechanic.objects.all()
+    if mechanic_ids:
+        mechanics = mechanics.filter(id__in=mechanic_ids)
 
-    # Filter hanya transaksi COMPLETED
-    transactions = Transaction.objects.filter(
-        mechanic=mechanic,
-        status=Transaction.StatusChoices.COMPLETED,
-        created_at__date__range=(start_date, end_date)
-    )
+    report_data = []
 
-    performance_data = transactions.aggregate(
-        total_jobs=Count('id'),
-        total_revenue=Sum('total_amount')
-    )
+    for mech in mechanics:
+        # A. Transaksi yang ditangani (Pendapatan Service)
+        txns = Transaction.objects.filter(
+            mechanic=mech,
+            status=Transaction.StatusChoices.COMPLETED,
+            created_at__date__range=(start_date, end_date)
+        ).select_related('customer', 'vehicle').prefetch_related('services__service', 'items__item')
 
-    # --- HITUNG AVG DURATION ---
-    # Hitung selisih (completed_at - created_at)
-    avg_duration_qs = transactions.filter(
-        completed_at__isnull=False
-    ).aggregate(
-        avg_time=Avg(F('completed_at') - F('created_at'))
-    )
-    
-    avg_duration = avg_duration_qs['avg_time'] # Returns timedelta or None
+        total_jobs = txns.count()
+        total_revenue = txns.aggregate(sum=Sum('total_amount'))['sum'] or Decimal('0')
 
-    # Format ke string "X jam Y menit"
-    avg_duration_str = "-"
-    if avg_duration:
-        total_seconds = int(avg_duration.total_seconds())
-        hours = total_seconds // 3600
-        minutes = (total_seconds % 3600) // 60
-        if hours > 0:
-            avg_duration_str = f"{hours} jam {minutes} menit"
-        else:
-            avg_duration_str = f"{minutes} menit"
+        # B. Pengeluaran oleh Mekanik (Jika ada fitur reimburse/belanja)
+        # Asumsi: PurchaseOrder punya field purchaser_mechanic
+        purchases = PurchaseOrder.objects.filter(
+            purchaser_mechanic=mech,
+            status=PurchaseOrder.StatusChoices.COMPLETED,
+            order_date__date__range=(start_date, end_date)
+        )
+        total_expense = purchases.aggregate(sum=Sum('total_amount'))['sum'] or Decimal('0')
 
-    # Cari jasa apa yang paling sering dia kerjakan
-    top_service = transactions.values('services__service__name').annotate(
-        service_count=Count('services__service')
-    ).order_by('-service_count').first()
+        # Detail Jobs untuk Table
+        job_details = []
+        for t in txns:
+            service_names = ", ".join([s.service.name for s in t.services.all()])
+            item_names = ", ".join([i.item.name for i in t.items.all()])
+            desc = []
+            if service_names: desc.append(f"[Jasa] {service_names}")
+            if item_names: desc.append(f"[Part] {item_names}")
+            
+            job_details.append({
+                'date': t.created_at,
+                'invoice': t.invoice_number,
+                'plate': t.vehicle.license_plate if t.vehicle else "Tanpa Kendaraan",
+                'description': " + ".join(desc),
+                'amount': t.total_amount
+            })
 
-    return {
-        'mechanic': mechanic,
-        'start_date': start_date,
-        'end_date': end_date,
-        'total_jobs': performance_data['total_jobs'] or 0,
-        'total_revenue': performance_data['total_revenue'] or Decimal('0.00'),
-        'avg_duration_str': avg_duration_str, # Data Baru
-        'top_service': top_service['services__service__name'] if top_service else "Belum ada data",
-        'top_service_count': top_service['service_count'] if top_service else 0,
-    }
-
-def generate_customer_report(start_date, end_date, sort_by='-total_spending'):
-    """
-    Analisis Pelanggan (Status COMPLETED).
-    """
-    # Filter transaksi valid dalam range tanggal
-    date_filter = Q(
-        vehicles__transaction__status=Transaction.StatusChoices.COMPLETED,
-        vehicles__transaction__created_at__date__range=(start_date, end_date)
-    )
-
-    customers = Customer.objects.annotate(
-        total_visits=Count('vehicles__transaction', filter=date_filter),
-        total_spending=Sum('vehicles__transaction__total_amount', filter=date_filter),
-        last_visit=Max('vehicles__transaction__created_at', filter=date_filter)
-    ).filter(
-        total_visits__gt=0 # Hanya ambil customer yang pernah transaksi di periode ini
-    ).order_by(sort_by)
-
-    return customers
-
-    # === 1. EXPENSE BREAKDOWN REPORT ===
-def generate_expense_breakdown(start_date, end_date):
-    """
-    Rincian pengeluaran berdasarkan kategori.
-    Hanya menghitung status PAID.
-    """
-    expenses = Expense.objects.filter(
-        status=Expense.StatusChoices.PAID,
-        payment_date__range=(start_date, end_date)
-    ).values('category__name').annotate(
-        total=Sum('amount'),
-        count=Count('id')
-    ).order_by('-total')
-
-    total_expense = expenses.aggregate(sum=Sum('total'))['sum'] or Decimal('0.00')
-
-    # Tambahkan persentase
-    breakdown = []
-    for item in expenses:
-        percent = (item['total'] / total_expense * 100) if total_expense > 0 else 0
-        breakdown.append({
-            'category': item['category__name'],
-            'total': item['total'],
-            'count': item['count'],
-            'percent': round(percent, 1)
+        report_data.append({
+            'mechanic_name': mech.name,
+            'total_jobs': total_jobs,
+            'total_revenue': total_revenue,
+            'total_expense': total_expense,
+            'net_contribution': total_revenue - total_expense,
+            'job_details': job_details, # List transaksi detail
+            'expense_details': purchases, # Queryset PO
         })
 
-    return {
-        'start_date': start_date,
-        'end_date': end_date,
-        'breakdown': breakdown,
-        'total_expense': total_expense
-    }
+    return report_data
 
-# === 2. DEAD STOCK REPORT ===
-def generate_dead_stock_report(days_threshold=90):
+# ==============================================================================
+# 4. LAPORAN KENDARAAN (VEHICLE HISTORY)
+# ==============================================================================
+def get_vehicle_history_queryset(filters):
     """
-    Mencari barang yang STOKNYA ADA (>0) tapi TIDAK ADA PENJUALAN dalam X hari terakhir.
+    Fokus ke Plat Nomor Kendaraan.
     """
+    # Base Query: Kendaraan yang pernah transaksi COMPLETED
+    vehicles = Vehicle.objects.filter(
+        transaction__status=Transaction.StatusChoices.COMPLETED
+    ).distinct()
+
+    # Filter Plat Nomor
+    plate = filters.get('plate')
+    if plate:
+        vehicles = vehicles.filter(license_plate__icontains=plate)
+
+    # Annotate Metrics
+    vehicles = vehicles.annotate(
+        total_visits=Count('transaction', filter=Q(transaction__status='COMPLETED')),
+        total_spending=Sum('transaction__total_amount', filter=Q(transaction__status='COMPLETED')),
+        last_visit=Max('transaction__created_at', filter=Q(transaction__status='COMPLETED'))
+    )
+
+    # Filter Range Kunjungan / Belanja
+    min_visits = filters.get('min_visits')
+    if min_visits:
+        vehicles = vehicles.filter(total_visits__gte=min_visits)
+    
+    # Sort
+    sort_by = filters.get('sort_by', '-last_visit')
+    vehicles = vehicles.order_by(sort_by)
+
+    return vehicles
+
+# ==============================================================================
+# 5. LAPORAN PENJUALAN BARANG (SALES ANALYSIS)
+# ==============================================================================
+def get_sales_report_data(filters):
+    start_date = filters.get('start_date')
+    end_date = filters.get('end_date')
+    
+    # Base Query: Item Transaksi yang COMPLETED
+    sales = TransactionItem.objects.filter(
+        transaction__status=Transaction.StatusChoices.COMPLETED,
+        transaction__created_at__date__range=(start_date, end_date)
+    )
+
+    # Filter Nama Barang / Kategori
+    q = filters.get('q')
+    if q:
+        sales = sales.filter(item__name__icontains=q)
+    
+    cat = filters.get('category')
+    if cat:
+        sales = sales.filter(item__category_id=cat)
+
+    # Grouping by Item
+    report = sales.values(
+        'item__name', 'item__category__name', 'item__sku', 'item__buy_price'
+    ).annotate(
+        qty_sold=Sum('quantity'),
+        # Hitung Revenue Real (Harga jual di transaksi - diskon)
+        total_revenue=Sum(F('quantity') * F('unit_price') * (Decimal('1') - F('discount_percentage') / Decimal('100')))
+    ).order_by('-total_revenue')
+
+    # Post-processing untuk Profit & Margin
+    final_data = []
+    total_omzet = Decimal(0)
+    total_profit = Decimal(0)
+
+    for row in report:
+        # HPP Total = Qty Terjual * Harga Beli Master (Estimasi)
+        # Note: Untuk akurasi 100% harusnya pakai FIFO di TransactionItemSource, tapi ini cukup untuk report general
+        hpp_total = row['qty_sold'] * row['item__buy_price']
+        profit = row['total_revenue'] - hpp_total
+        margin = (profit / row['total_revenue'] * 100) if row['total_revenue'] > 0 else 0
+
+        total_omzet += row['total_revenue']
+        total_profit += profit
+
+        final_data.append({
+            'name': row['item__name'],
+            'category': row['item__category__name'],
+            'qty': row['qty_sold'],
+            'revenue': row['total_revenue'],
+            'hpp': hpp_total,
+            'profit': profit,
+            'margin': margin
+        })
+
+    return final_data, total_omzet, total_profit
+
+# ==============================================================================
+# 6. LAPORAN BARANG MATI (DEAD STOCK)
+# ==============================================================================
+def get_dead_stock_queryset(days_threshold=90, category_id=None, q=None):
     cutoff_date = timezone.now() - timedelta(days=int(days_threshold))
     
-    # Ambil item yang punya stok
+    # Barang yang punya stok > 0
     items = InventoryItem.objects.filter(quantity__gt=0)
-    
+
+    if category_id:
+        items = items.filter(category_id=category_id)
+    if q:
+        items = items.filter(name__icontains=q)
+
     dead_stock = []
     for item in items:
-        # Cek kapan terakhir terjual (Completed Transaction)
-        last_sale = TransactionItem.objects.filter(
+        # Cari tanggal transaksi terakhir
+        last_txn = TransactionItem.objects.filter(
             item=item,
             transaction__status=Transaction.StatusChoices.COMPLETED
         ).aggregate(last_date=Max('transaction__created_at'))['last_date']
 
-        # Jika tidak pernah terjual ATAU terakhir terjual sebelum cutoff date
-        if last_sale is None or last_sale < cutoff_date:
+        # Jika belum pernah laku ATAU laku terakhir sebelum cutoff
+        if last_txn is None or last_txn < cutoff_date:
+            days_inactive = (timezone.now() - last_txn).days if last_txn else 9999
             dead_stock.append({
                 'item': item,
-                'last_sale': last_sale,
-                'days_inactive': (timezone.now() - last_sale).days if last_sale else "Selamanya",
+                'last_sale': last_txn,
+                'days_inactive': days_inactive if days_inactive != 9999 else "Belum Pernah",
                 'asset_value': item.quantity * item.buy_price
             })
     
-    # Sort by nilai aset tertinggi (uang mandeg terbanyak)
+    # Sort by Asset Value (Uang Mandeg)
     dead_stock.sort(key=lambda x: x['asset_value'], reverse=True)
-    
     return dead_stock
 
-# === 3. SALES REPORT ===
-def generate_sales_report(start_date, end_date):
-    """
-    Rincian penjualan per barang (Item Sales).
-    """
-    sales = TransactionItem.objects.filter(
-        transaction__status=Transaction.StatusChoices.COMPLETED,
-        transaction__created_at__date__range=(start_date, end_date)
-    ).values(
-        'item__name', 'item__sku', 'item__buy_price'
-    ).annotate(
-        total_qty=Sum('quantity'),
-        total_revenue=Sum(F('quantity') * F('unit_price') * (Decimal('1') - F('discount_percentage') / Decimal('100')))
-    ).order_by('-total_revenue')
+# ==============================================================================
+# 7. RINCIAN PENGELUARAN
+# ==============================================================================
+def get_expense_queryset(filters):
+    expenses = Expense.objects.select_related('category').filter(status='PAID')
 
-    # Hitung Estimasi Profit (Revenue - HPP)
-    # Note: Ini estimasi kasar menggunakan buy_price saat ini
-    sales_data = []
-    total_omzet = Decimal('0.00')
-    total_profit = Decimal('0.00')
+    start = filters.get('start_date')
+    end = filters.get('end_date')
+    if start and end:
+        expenses = expenses.filter(payment_date__range=(start, end))
+    
+    cat = filters.get('category')
+    if cat:
+        expenses = expenses.filter(category_id=cat)
+    
+    q = filters.get('q') # Cari nama pengeluaran
+    if q:
+        expenses = expenses.filter(title__icontains=q)
 
-    for s in sales:
-        hpp = s['total_qty'] * s['item__buy_price']
-        profit = s['total_revenue'] - hpp
-        
-        total_omzet += s['total_revenue']
-        total_profit += profit
-
-        sales_data.append({
-            'name': s['item__name'],
-            'sku': s['item__sku'],
-            'qty': s['total_qty'],
-            'revenue': s['total_revenue'],
-            'hpp_total': hpp,
-            'profit': profit,
-            'margin': (profit / s['total_revenue'] * 100) if s['total_revenue'] > 0 else 0
-        })
-
-    return {
-        'start_date': start_date,
-        'end_date': end_date,
-        'sales_data': sales_data,
-        'total_omzet': total_omzet,
-        'total_profit': total_profit
-    }
+    return expenses.order_by('-payment_date')

@@ -4,10 +4,16 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block extra_head %}
+<style>
+    .formset-row.deleted { display: none; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {% if form.errors %}
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <div class="alert alert-danger alert-dismissible fade show mt-3 mx-4" role="alert">
         <strong><i class="fas fa-exclamation-triangle"></i> Terjadi Kesalahan:</strong>
         Periksa kembali isian formulir di bawah ini.
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -15,142 +21,267 @@
 {% endif %}
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">{{ title }}</h1>
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+        <h1 class="mb-0">{{ title }}</h1>
+    </div>
 
     <div class="row">
+        <!-- FORM COLUMN -->
         <div class="col-lg-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-primary text-white">
-                    <i class="fas fa-edit"></i> Detail Item
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0 card-title"><i class="fas fa-edit"></i> Data Item</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     
                     <form method="POST" id="inventoryForm" enctype="multipart/form-data">
                         {% csrf_token %}
+                        <input type="hidden" name="return_to" value="{{ return_to }}">
 
+                        <!-- Header Info for Edit Mode -->
                         {% if form.instance.pk %}
-                            <div class="row mb-3 p-2 bg-light rounded mx-1 border">
-                                <div class="col-md-6">
-                                    <label class="form-label text-muted small fw-bold text-uppercase">Stok Saat Ini</label>
-                                    <div class="fs-5 fw-bold text-dark">{{ form.instance.quantity }} Unit</div>
+                            <div class="row mb-4 p-3 bg-light rounded border mx-0">
+                                <div class="col-md-6 text-center border-end">
+                                    <label class="text-muted small fw-bold text-uppercase mb-1">Stok Saat Ini</label>
+                                    <div class="fs-4 fw-bold text-dark">{{ form.instance.quantity }} <span class="fs-6 text-muted">Unit</span></div>
                                 </div>
-                                <div class="col-md-6 border-start">
-                                    <label class="form-label text-muted small fw-bold text-uppercase">Harga Beli Rata-rata</label>
-                                    <div class="fs-5 fw-bold text-success">Rp {{ form.instance.buy_price|intcomma }}</div>
+                                <div class="col-md-6 text-center">
+                                    <label class="text-muted small fw-bold text-uppercase mb-1">Harga Beli Rata-rata</label>
+                                    <div class="fs-4 fw-bold text-success">Rp {{ form.instance.buy_price|intcomma }}</div>
                                 </div>
                             </div>
                         {% endif %}
                         
+                        <!-- MAIN FORM -->
                         {% crispy form %}
 
+                        <!-- 🔥 MODULAR PRICING FORMSET -->
+                        <div class="card mt-4 border-warning">
+                            <div class="card-header bg-warning bg-opacity-25 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 text-dark fw-bold"><i class="fas fa-tags me-2"></i>Daftar Harga Jasa Pasang (Per Motor)</h6>
+                                <button type="button" class="btn btn-sm btn-warning fw-bold text-dark" id="add-price">
+                                    <i class="fas fa-plus"></i> Tambah
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                {{ price_formset.management_form }}
+                                <table class="table table-striped mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 50%;">Tipe Motor (Cth: NMAX, Beat)</th>
+                                            <th style="width: 35%;">Harga Jasa (Rp)</th>
+                                            <th style="width: 15%;" class="text-center">Hapus</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="price-tbody">
+                                        {% for form in price_formset %}
+                                            <tr class="formset-row">
+                                                {{ form.id }}
+                                                <td class="p-2">
+                                                    {{ form.vehicle_type }}
+                                                    {% if form.vehicle_type.errors %}
+                                                        <div class="text-danger small">{{ form.vehicle_type.errors.0 }}</div>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="p-2">
+                                                    {{ form.price }}
+                                                    {% if form.price.errors %}
+                                                        <div class="text-danger small">{{ form.price.errors.0 }}</div>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="p-2 text-center align-middle">
+                                                    {% if price_formset.can_delete %}
+                                                        <button type="button" class="btn btn-sm btn-outline-danger remove-row">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                        <div class="d-none">{{ form.DELETE }}</div>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="card-footer bg-light text-muted small fst-italic">
+                                * Kosongkan jika barang ini tidak memiliki jasa pasang khusus.
+                            </div>
+                        </div>
+
                         <div class="d-flex justify-content-between mt-4 pt-3 border-top">
-                            <a href="{% url 'inventory:inventory_list' %}" class="btn btn-secondary px-4">
-                                <i class="fas fa-arrow-left"></i> Kembali
+                            <a href="{% if return_to %}{{ return_to }}{% else %}{% url 'inventory:inventory_list' %}{% endif %}" class="btn btn-secondary px-4">
+                                <i class="fas fa-arrow-left me-2"></i> Batal
                             </a>
                             <button type="submit" class="btn btn-success px-4 fw-bold">
-                                <i class="fas fa-save"></i> Simpan Data
+                                <i class="fas fa-save me-2"></i> Simpan Data
                             </button>
                         </div>
                     </form>
-                    </div>
+                </div>
             </div>
         </div>
         
+        <!-- SIDEBAR INFO -->
         <div class="col-lg-4">
-            <div class="alert alert-info shadow-sm">
-                <h5 class="alert-heading"><i class="fas fa-info-circle"></i> Petunjuk</h5>
-                <hr>
-                <p class="mb-2"><strong>Spesifikasi Dinamis:</strong><br>
-                Form input tambahan akan muncul otomatis ketika Anda memilih <b>Kategori</b> yang memiliki aturan spesifikasi khusus (misal: Oli, Ban).</p>
-                
-                <p class="mb-0 text-muted small">
-                    * Pastikan SKU unik (tidak boleh sama dengan barang lain).
-                </p>
+            <div class="card shadow-sm border-0 bg-info bg-opacity-10 mb-4">
+                <div class="card-body">
+                    <h5 class="card-title text-info mb-3"><i class="fas fa-lightbulb"></i> Petunjuk Pengisian</h5>
+                    
+                    <div class="d-flex align-items-start mb-3">
+                        <i class="fas fa-check-circle text-info mt-1 me-2"></i>
+                        <div>
+                            <strong>Harga Jasa Modular:</strong>
+                            <p class="small text-muted mb-0">Sekarang Anda bisa memasukkan harga jasa pasang yang berbeda untuk setiap tipe motor. Gunakan tombol "Tambah" di bawah form utama.</p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-start mb-3">
+                        <i class="fas fa-check-circle text-info mt-1 me-2"></i>
+                        <div>
+                            <strong>Spesifikasi Dinamis:</strong>
+                            <p class="small text-muted mb-0">Form tambahan akan muncul otomatis sesuai Kategori yang dipilih (misal: Oli butuh SAE & Volume).</p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-check-circle text-info mt-1 me-2"></i>
+                        <div>
+                            <strong>SKU Unik:</strong>
+                            <p class="small text-muted mb-0">Pastikan Kode Barang (SKU) tidak sama dengan barang lain untuk scan barcode.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Empty Form Template for JS -->
+<table style="display:none">
+    <tbody id="empty-form-row">
+        <tr class="formset-row">
+            {{ price_formset.empty_form.id }}
+            <td class="p-2">{{ price_formset.empty_form.vehicle_type }}</td>
+            <td class="p-2">{{ price_formset.empty_form.price }}</td>
+            <td class="p-2 text-center align-middle">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-row">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <div class="d-none">{{ price_formset.empty_form.DELETE }}</div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
 {% endblock %}
 
 {% block extra_scripts %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
-    const existingSpecs = {{ form.instance.extra_specs|default:"{}"|safe }};
+    // Ambil data specs yang sudah ada
+    const existingSpecs = {{ item.extra_specs|default:"{}"|safe }};
 </script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     
-    // 1. Inisialisasi Element
-    const categorySelect = document.querySelector('select[name="category"]');
+    // Init Select2
+    $('.select2-enable').select2({
+        theme: "bootstrap-5",
+        width: '100%',
+        placeholder: "Pilih Kategori...",
+    });
+
+    // --- LOGIC SPEC DINAMIS (SAMA SEPERTI SEBELUMNYA) ---
+    const categorySelect = $('select[name="category"]'); 
     const specsContainer = document.getElementById('dynamic_specs_container');
     
-    // Safety check
-    if (!categorySelect || !specsContainer) return;
-
-    // 2. Fungsi Generate Input HTML
     function generateInputs(specsList) {
-        specsContainer.innerHTML = ''; // Reset container
-
-        if (specsList.length === 0) {
-            specsContainer.innerHTML = '<p class="text-muted fst-italic small mb-0"><i class="fas fa-check-circle"></i> Tidak ada spesifikasi khusus untuk kategori ini.</p>';
-            specsContainer.classList.remove('p-3', 'border'); // Hapus border biar rapi
+        specsContainer.innerHTML = ''; 
+        if (!specsList || specsList.length === 0) {
+            specsContainer.innerHTML = '<p class="text-muted fst-italic small mb-0"><i class="fas fa-info-circle me-1"></i> Tidak ada spesifikasi khusus untuk kategori ini.</p>';
+            specsContainer.classList.remove('p-3', 'border'); 
             return;
         }
-
-        specsContainer.classList.add('p-3', 'border'); // Tambah border
+        specsContainer.classList.add('p-3', 'border', 'bg-white'); 
         
-        // Header Section
         const header = document.createElement('div');
-        header.innerHTML = '<h6 class="text-primary fw-bold mb-3"><i class="fas fa-sliders-h"></i> Spesifikasi Khusus</h6>';
+        header.innerHTML = '<h6 class="text-primary fw-bold mb-3 border-bottom pb-2"><i class="fas fa-sliders-h me-2"></i> Spesifikasi Khusus</h6>';
         specsContainer.appendChild(header);
 
-        // Loop membuat input
+        const row = document.createElement('div');
+        row.className = 'row g-3';
+        specsContainer.appendChild(row);
+
         specsList.forEach(label => {
             const cleanLabel = label.trim();
-            const inputName = 'spec_' + cleanLabel; // Prefix spec_ agar mudah ditangkap di Views
-            const oldValue = existingSpecs[cleanLabel] || ''; // Isi value lama jika ada
+            const inputName = 'spec_' + cleanLabel;
+            const oldValue = existingSpecs[cleanLabel] || ''; 
 
-            const wrapper = document.createElement('div');
-            wrapper.className = 'mb-3';
-            wrapper.innerHTML = `
+            const col = document.createElement('div');
+            col.className = 'col-md-6';
+            col.innerHTML = `
                 <label class="form-label fw-bold small text-secondary">${cleanLabel}</label>
                 <input type="text" name="${inputName}" class="form-control" 
-                       value="${oldValue}" placeholder="Isi ${cleanLabel}...">
+                       value="${oldValue}" placeholder="Contoh: 10W-40">
             `;
-            specsContainer.appendChild(wrapper);
+            row.appendChild(col);
         });
     }
 
-    // 3. Fungsi Fetch Data dari API Django
     function fetchAndRenderSpecs() {
-        const categoryId = categorySelect.value;
-        
+        const categoryId = categorySelect.val();
         if (!categoryId) {
             specsContainer.innerHTML = '';
             return;
         }
-
-        // Tampilkan loading state
-        specsContainer.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Memuat spesifikasi...</div>';
-
+        specsContainer.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-2"></i> Memuat form spesifikasi...</div>';
         fetch(`/inventory/api/get-category-specs/${categoryId}/`)
             .then(res => res.json())
-            .then(data => {
-                generateInputs(data.specs);
-            })
+            .then(data => { generateInputs(data.specs); })
             .catch(err => {
-                console.error(err);
-                specsContainer.innerHTML = '<div class="text-danger small">Gagal memuat spesifikasi.</div>';
+                specsContainer.innerHTML = '<div class="text-danger small"><i class="fas fa-exclamation-circle"></i> Gagal memuat spesifikasi.</div>';
             });
     }
 
-    // 4. Pasang Event Listener
-    categorySelect.addEventListener('change', fetchAndRenderSpecs);
+    categorySelect.on('select2:select', fetchAndRenderSpecs);
+    if (categorySelect.val()) { fetchAndRenderSpecs(); }
 
-    // 5. Trigger saat halaman pertama kali load (untuk Edit Mode)
-    if (categorySelect.value) {
-        fetchAndRenderSpecs();
-    }
+
+    // --- 🔥 LOGIC DYNAMIC FORMSET (HARGA JASA) ---
+    const totalForms = $('#id_service_prices-TOTAL_FORMS'); // Prefix default dari inlineformset factory biasanya inventoryitem_set atau service_prices
+    // Cek prefix yang digenerate django di HTML source jika script ini error. 
+    // Di views kita pake VehicleServicePriceFormSet, biasanya prefix defaultnya 'service_prices' (related name)
+    
+    $('#add-price').click(function() {
+        const formIdx = totalForms.val();
+        const emptyRow = $('#empty-form-row').html().replace(/__prefix__/g, formIdx);
+        $('#price-tbody').append(emptyRow);
+        totalForms.val(parseInt(formIdx) + 1);
+        
+        // Add bootstrap classes to new inputs
+        $('#price-tbody tr:last input').addClass('form-control');
+    });
+
+    $(document).on('click', '.remove-row', function() {
+        const row = $(this).closest('tr');
+        const deleteInput = row.find('input[type="checkbox"][name$="-DELETE"]');
+        
+        if (deleteInput.length > 0) {
+            // Jika row sudah ada di DB (punya ID), centang DELETE dan sembunyikan
+            deleteInput.prop('checked', true);
+            row.addClass('deleted');
+        } else {
+            // Jika row baru (belum save), hapus dari DOM
+            row.remove();
+        }
+    });
+
+    // Init styling untuk formset awal
+    $('#price-tbody input[type="text"], #price-tbody input[type="number"]').addClass('form-control');
 });
 </script>
 {% endblock %}

@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Riwayat Kendaraan{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 mt-4">
+    <h2><i class="bi bi-car-front text-dark me-2"></i>Riwayat Service Kendaraan</h2>
+
+    <div class="card shadow-sm mb-4 mt-3">
+        <div class="card-body">
+            <form method="get">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="small text-muted fw-bold">Cari Plat Nomor</label>
+                        <input type="text" name="plate" class="form-control" placeholder="Contoh: B 1234 XYZ" value="{{ filters.plate|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small text-muted fw-bold">Minimal Kunjungan</label>
+                        <input type="number" name="min_visits" class="form-control" placeholder="0" value="{{ filters.min_visits|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small text-muted fw-bold">Urutkan</label>
+                        <select name="sort_by" class="form-select">
+                            <option value="-last_visit" {% if filters.sort_by == '-last_visit' %}selected{% endif %}>Terbaru</option>
+                            <option value="-total_spending" {% if filters.sort_by == '-total_spending' %}selected{% endif %}>Total Belanja Tertinggi</option>
+                            <option value="-total_visits" {% if filters.sort_by == '-total_visits' %}selected{% endif %}>Paling Sering Datang</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-dark w-100"><i class="bi bi-search"></i> Cari</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Plat Nomor</th>
+                            <th>Pemilik (Terdaftar)</th>
+                            <th>Merk/Model</th>
+                            <th class="text-center">Total Visit</th>
+                            <th class="text-end">Total Belanja</th>
+                            <th class="text-end pe-3">Terakhir Service</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vehicle in vehicles %}
+                        <tr>
+                            <td class="ps-3">
+                                <span class="badge bg-dark fs-6 font-monospace">{{ vehicle.license_plate }}</span>
+                            </td>
+                            <td>{{ vehicle.customer.name }} <br> <small class="text-muted">{{ vehicle.customer.phone_number }}</small></td>
+                            <td>{{ vehicle.brand }} {{ vehicle.model }}</td>
+                            <td class="text-center fw-bold">{{ vehicle.total_visits }}x</td>
+                            <td class="text-end text-success fw-bold">Rp {{ vehicle.total_spending|intcomma }}</td>
+                            <td class="text-end pe-3">
+                                {% if vehicle.last_visit %}
+                                    {{ vehicle.last_visit|date:"d M Y" }} <br>
+                                    <small class="text-muted">{{ vehicle.last_visit|timesince }} lalu</small>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center py-5 text-muted">Data tidak ditemukan.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if vehicles.has_other_pages %}
+        <div class="card-footer bg-white">
+            {% include 'partials/pagination.html' with page_obj=vehicles %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

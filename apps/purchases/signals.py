@@ -45,21 +45,42 @@ def handle_purchase_status_change(sender, instance, created, **kwargs):
     old_status = getattr(instance, "_old_status", None)
     new_status = instance.status
 
+    # === KASUS 1: PENDING -> COMPLETED (Barang Masuk) ===
     if old_status != 'COMPLETED' and new_status == 'COMPLETED':
         with transaction.atomic():
             for po_item in instance.items.all():
-                # --- KUNCI PERBAIKAN 1: Inisialisasi Otomatis ---
+                # 1. Inisialisasi Remaining (FIFO)
                 po_item.quantity_remaining = po_item.quantity 
                 po_item.save()
                 
-                # Update total master inventory
-                item = po_item.item
-                before = item.quantity
-                item.quantity += po_item.quantity
+                # 2. Ambil Item Master
+                item = InventoryItem.objects.select_for_update().get(pk=po_item.item.pk) # Pakai select_for_update biar aman
+                before_qty = item.quantity
+                
+                # --- [PERBAIKAN UTAMA] HITUNG HARGA RATA-RATA (AVERAGE COST) ---
+                # Rumus: (Nilai Stok Lama + Nilai Stok Baru) / Total Stok Baru
+                old_stock_value = Decimal(before_qty) * Decimal(item.buy_price)
+                new_stock_value = Decimal(po_item.quantity) * Decimal(po_item.unit_price)
+                total_qty = before_qty + po_item.quantity
+
+                if total_qty > 0:
+                    # Update Harga Beli Baru
+                    item.buy_price = (old_stock_value + new_stock_value) / Decimal(total_qty)
+
+                # 3. Update Stok Master
+                item.quantity = total_qty
                 item.save()
 
-                # Buat log inventory
-                _create_inventory_log(item, po_item.quantity, before, item.quantity, "PURCHASE_COMPLETED", instance.pk)
+                # 4. Buat Log
+                _create_inventory_log(
+                    item, 
+                    po_item.quantity, 
+                    before_qty, 
+                    item.quantity, 
+                    "PURCHASE_COMPLETED", 
+                    instance.pk, 
+                    note=f"PO #{instance.pk} Completed"
+                )
 
     # === KASUS 2: COMPLETED -> CANCELLED (Batalkan & Reset FIFO) ===
     elif old_status == PurchaseOrder.StatusChoices.COMPLETED and new_status != PurchaseOrder.StatusChoices.COMPLETED:

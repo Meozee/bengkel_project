@@ -1,48 +1,19 @@
-# =======================
-# Django Core
-# =======================
 Django==4.2.11
 psycopg2-binary==2.9.9
 python-dotenv==1.0.1
 gunicorn==21.2.0
-
-# =======================
-# Forms & Frontend
-# =======================
 django-crispy-forms==2.1
 crispy-bootstrap5==0.7
-
-# =======================
-# Dev Tools
-# =======================
 django-extensions==3.2.3
 django-debug-toolbar==4.3.0
-
-# =======================
-# Images
-# =======================
 Pillow==10.3.0
-
-# =======================
-# Data & Reporting
-# =======================
 pandas==2.2.1
 openpyxl==3.1.2
 reportlab==4.1.0
 django-filter==24.2
-
-# =======================
-# Printing – QPOS USB Thermal
-# =======================
 python-escpos==3.0
 pyusb==1.2.1
 weasyprint==63.1
-
-# =======================
-# Code Quality (Optional)
-# =======================
 black==24.4.2
 flake8==7.0.0
 isort==5.13.2
-
-
